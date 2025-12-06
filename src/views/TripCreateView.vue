@@ -7,7 +7,7 @@
           <p>填写旅行信息，AI将为您生成个性化行程</p>
         </div>
       </template>
-      
+
       <el-tabs v-model="activeTab" type="card">
         <!-- 表单输入 -->
         <el-tab-pane label="表单输入" name="form">
@@ -21,17 +21,14 @@
                   />
                 </el-form-item>
               </el-col>
-              
+
               <el-col :span="12">
                 <el-form-item label="目的地" prop="destination">
-                  <el-input
-                    v-model="tripForm.destination"
-                    placeholder="请输入目的地（如：北京）"
-                  />
+                  <el-input v-model="tripForm.destination" placeholder="请输入目的地（如：北京）" />
                 </el-form-item>
               </el-col>
             </el-row>
-            
+
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="开始日期" prop="start_date">
@@ -45,7 +42,7 @@
                   />
                 </el-form-item>
               </el-col>
-              
+
               <el-col :span="12">
                 <el-form-item label="结束日期" prop="end_date">
                   <el-date-picker
@@ -59,7 +56,7 @@
                 </el-form-item>
               </el-col>
             </el-row>
-            
+
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="总预算（元）" prop="total_budget">
@@ -72,7 +69,7 @@
                   />
                 </el-form-item>
               </el-col>
-              
+
               <el-col :span="12">
                 <el-form-item label="旅行人数" prop="people_count">
                   <el-input-number
@@ -85,15 +82,19 @@
                 </el-form-item>
               </el-col>
             </el-row>
-            
+
             <el-form-item label="旅行偏好" prop="preferences">
               <el-checkbox-group v-model="tripForm.preferences">
-                <el-checkbox v-for="preference in preferenceOptions" :key="preference.value" :label="preference.value">
+                <el-checkbox
+                  v-for="preference in preferenceOptions"
+                  :key="preference.value"
+                  :label="preference.value"
+                >
                   {{ preference.label }}
                 </el-checkbox>
               </el-checkbox-group>
             </el-form-item>
-            
+
             <el-form-item label="详细说明">
               <el-input
                 v-model="tripForm.description"
@@ -104,16 +105,18 @@
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        
+
         <!-- 语音输入 -->
         <el-tab-pane label="语音输入" name="voice">
           <div class="voice-input-section">
             <div class="voice-placeholder">
               <el-icon class="voice-icon"><Microphone /></el-icon>
               <p>点击下方按钮开始语音输入</p>
-              <p class="voice-hint">请清晰说出您的旅行需求，例如："我想下个月去北京玩5天，预算5000元，两个人，喜欢历史文化景点"</p>
+              <p class="voice-hint">
+                请清晰说出您的旅行需求，例如："我想下个月去北京玩5天，预算5000元，两个人，喜欢历史文化景点"
+              </p>
             </div>
-            
+
             <div class="voice-controls">
               <el-button
                 type="success"
@@ -124,7 +127,7 @@
               >
                 {{ isRecording ? '停止录音' : '开始录音' }}
               </el-button>
-              
+
               <el-button
                 type="primary"
                 size="large"
@@ -134,7 +137,7 @@
                 识别语音
               </el-button>
             </div>
-            
+
             <el-form-item label="识别结果">
               <el-input
                 v-model="voiceResult"
@@ -146,15 +149,10 @@
           </div>
         </el-tab-pane>
       </el-tabs>
-      
+
       <div class="form-actions">
         <el-button @click="$router.back()">取消</el-button>
-        <el-button
-          type="primary"
-          size="large"
-          :loading="submitting"
-          @click="handleSubmit"
-        >
+        <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">
           生成行程
         </el-button>
       </div>
@@ -164,7 +162,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ElMessage, FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useTripStore } from '../stores/trip'
 import { Microphone, Close } from '@element-plus/icons-vue'
@@ -188,7 +187,7 @@ const preferenceOptions = [
   { label: '休闲度假', value: 'relax' },
   { label: '冒险探索', value: 'adventure' },
   { label: '亲子游', value: 'family' },
-  { label: '情侣游', value: 'couple' }
+  { label: '情侣游', value: 'couple' },
 ]
 
 // 表单数据
@@ -200,41 +199,39 @@ const tripForm = ref({
   total_budget: 0,
   people_count: 1,
   preferences: [] as string[],
-  description: ''
+  description: '',
 })
 
 // 表单验证规则
 const tripRules = ref<FormRules>({
-  title: [
-    { required: true, message: '请输入行程标题', trigger: 'blur' }
-  ],
-  destination: [
-    { required: true, message: '请输入目的地', trigger: 'blur' }
-  ],
-  start_date: [
-    { required: true, message: '请选择开始日期', trigger: 'change' }
-  ],
+  title: [{ required: true, message: '请输入行程标题', trigger: 'blur' }],
+  destination: [{ required: true, message: '请输入目的地', trigger: 'blur' }],
+  start_date: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   end_date: [
     { required: true, message: '请选择结束日期', trigger: 'change' },
     {
       validator: (rule, value, callback) => {
-        if (value && tripForm.value.start_date && new Date(value) < new Date(tripForm.value.start_date)) {
+        if (
+          value &&
+          tripForm.value.start_date &&
+          new Date(value) < new Date(tripForm.value.start_date)
+        ) {
           callback(new Error('结束日期不能早于开始日期'))
         } else {
           callback()
         }
       },
-      trigger: 'change'
-    }
+      trigger: 'change',
+    },
   ],
   total_budget: [
     { required: true, message: '请输入总预算', trigger: 'blur' },
-    { min: 0, message: '预算不能为负数', trigger: 'blur' }
+    { min: 0, message: '预算不能为负数', trigger: 'blur' },
   ],
   people_count: [
     { required: true, message: '请输入旅行人数', trigger: 'blur' },
-    { min: 1, message: '人数不能少于1人', trigger: 'blur' }
-  ]
+    { min: 1, message: '人数不能少于1人', trigger: 'blur' },
+  ],
 })
 
 // 切换录音状态
@@ -259,26 +256,25 @@ const transcribeVoice = () => {
 // 提交表单
 const handleSubmit = async () => {
   if (!tripFormRef.value) return
-  
+
   try {
     await tripFormRef.value.validate()
     submitting.value = true
-    
+
     // 创建行程
     const tripData = {
       title: tripForm.value.title,
       destination: tripForm.value.destination,
       start_date: tripForm.value.start_date,
       end_date: tripForm.value.end_date,
-      total_budget: tripForm.value.total_budget
+      total_budget: tripForm.value.total_budget,
     }
-    
+
     const newTrip = await tripStore.createTrip(tripData)
-    
+
     // 生成AI行程
     await tripStore.generateAITrip(newTrip.id)
-    
-    ElMessage.success('行程创建成功，AI正在生成详细行程...')
+    ElMessage.success('AI行程生成成功')
     router.push(`/trips/${newTrip.id}`)
   } catch (error: any) {
     ElMessage.error(error.response?.data?.detail || '行程创建失败')

@@ -6,6 +6,7 @@ export interface User {
   id: number
   username: string
   phone_number: string
+  avatar?: string
   preferences: any
   created_at: string
   updated_at: string
@@ -22,12 +23,12 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await apiClient.post('/auth/login', {
         username,
-        password
+        password,
       })
-      token.value = response.access_token
-      localStorage.setItem('token', response.access_token)
+      token.value = response.data.access_token
+      localStorage.setItem('token', response.data.access_token)
       await fetchUserProfile()
-      return response
+      return response.data
     } catch (error) {
       console.error('Login failed:', error)
       throw error
@@ -39,7 +40,7 @@ export const useUserStore = defineStore('user', () => {
       const response = await apiClient.post('/users/register', {
         username,
         phone_number,
-        password
+        password,
       })
       return response
     } catch (error) {
@@ -62,7 +63,7 @@ export const useUserStore = defineStore('user', () => {
   async function fetchUserProfile() {
     try {
       const response = await apiClient.get('/users/profile')
-      user.value = response
+      user.value = response.data
       return response
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
@@ -73,8 +74,8 @@ export const useUserStore = defineStore('user', () => {
   async function updateUserProfile(updates: Partial<User>) {
     try {
       const response = await apiClient.put('/users/profile', updates)
-      user.value = response
-      return response
+      user.value = response.data
+      return response.data
     } catch (error) {
       console.error('Failed to update user profile:', error)
       throw error
@@ -103,6 +104,6 @@ export const useUserStore = defineStore('user', () => {
     logout,
     fetchUserProfile,
     updateUserProfile,
-    initialize
+    initialize,
   }
 })

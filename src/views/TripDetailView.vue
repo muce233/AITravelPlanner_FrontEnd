@@ -19,7 +19,7 @@
           </el-button>
         </div>
       </div>
-      
+
       <div class="trip-info-content">
         <div class="trip-basic-info">
           <div class="info-item">
@@ -39,18 +39,14 @@
             <span>已支出: {{ currentTrip?.actual_expense }} 元</span>
           </div>
         </div>
-        
+
         <div class="trip-progress">
-          <el-progress
-            :percentage="budgetUsage"
-            :color="budgetUsageColor"
-            :status="budgetStatus"
-          />
+          <el-progress :percentage="budgetUsage" :color="budgetUsageColor" :status="budgetStatus" />
           <span class="progress-text">{{ budgetUsage }}% 预算已使用</span>
         </div>
       </div>
     </el-card>
-    
+
     <!-- 行程视图切换 -->
     <el-card class="trip-view-card">
       <el-tabs v-model="activeView" type="card">
@@ -64,16 +60,12 @@
             </div>
           </div>
         </el-tab-pane>
-        
+
         <!-- 时间轴视图 -->
         <el-tab-pane label="时间轴视图" name="timeline">
           <div class="timeline-section">
             <el-collapse v-model="activeDays" accordion>
-              <el-collapse-item
-                v-for="day in days"
-                :key="day"
-                :title="`第 ${day} 天`"
-              >
+              <el-collapse-item v-for="day in days" :key="day" :title="`第 ${day} 天`">
                 <el-timeline>
                   <el-timeline-item
                     v-for="detail in getDetailsByDay(day)"
@@ -84,19 +76,25 @@
                     <el-card class="detail-card">
                       <div class="detail-header">
                         <h3>{{ detail.name }}</h3>
-                        <el-tag :type="getDetailTypeColor(detail.type)">{{ getDetailTypeName(detail.type) }}</el-tag>
+                        <el-tag :type="getDetailTypeColor(detail.type)">{{
+                          getDetailTypeName(detail.type)
+                        }}</el-tag>
                       </div>
-                      
+
                       <div class="detail-content">
-                        <p class="detail-time">{{ formatTimeRange(detail.start_time, detail.end_time) }}</p>
+                        <p class="detail-time">
+                          {{ formatTimeRange(detail.start_time, detail.end_time) }}
+                        </p>
                         <p class="detail-address" v-if="detail.address">{{ detail.address }}</p>
-                        <p class="detail-description" v-if="detail.description">{{ detail.description }}</p>
+                        <p class="detail-description" v-if="detail.description">
+                          {{ detail.description }}
+                        </p>
                         <p class="detail-price" v-if="detail.price > 0">
                           <el-icon><Money /></el-icon>
                           {{ detail.price }} 元
                         </p>
                       </div>
-                      
+
                       <div class="detail-actions">
                         <el-button size="small" @click="editDetail(detail)">
                           <el-icon><Edit /></el-icon>
@@ -110,7 +108,7 @@
                     </el-card>
                   </el-timeline-item>
                 </el-timeline>
-                
+
                 <div class="add-detail-section">
                   <el-button type="primary" size="small" @click="addDetail(day)">
                     <el-icon><Plus /></el-icon>
@@ -123,7 +121,7 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
-    
+
     <!-- 添加费用记录入口 -->
     <div class="add-expense-section">
       <el-button
@@ -145,9 +143,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTripStore } from '../stores/trip'
 import { useUserStore } from '../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Money, Edit, Share, Location, Calendar, Wallet, 
-  Map, Plus, Delete 
+import {
+  Money,
+  Edit,
+  Share,
+  Location,
+  Calendar,
+  Wallet,
+  Plus,
+  Delete,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -168,7 +172,7 @@ const activeDays = ref([1])
 
 // 计算属性
 const days = computed(() => {
-  const daySet = new Set(tripDetails.value.map(detail => detail.day))
+  const daySet = new Set(tripDetails.value.map((detail) => detail.day))
   return Array.from(daySet).sort((a, b) => a - b)
 })
 
@@ -215,7 +219,7 @@ const formatTimeRange = (startTime?: string, endTime?: string) => {
 
 const getDetailsByDay = (day: number) => {
   return tripDetails.value
-    .filter(detail => detail.day === day)
+    .filter((detail) => detail.day === day)
     .sort((a, b) => {
       const timeA = new Date(a.start_time || 0).getTime()
       const timeB = new Date(b.start_time || 0).getTime()
@@ -225,10 +229,10 @@ const getDetailsByDay = (day: number) => {
 
 const getDetailTypeColor = (type: string) => {
   const colorMap: Record<string, string> = {
-    '景点': 'primary',
-    '住宿': 'success',
-    '餐厅': 'warning',
-    '交通': 'info'
+    景点: 'primary',
+    住宿: 'success',
+    餐厅: 'warning',
+    交通: 'info',
   }
   return colorMap[type] || 'default'
 }
@@ -262,9 +266,9 @@ const deleteDetail = async (detail: any) => {
     await ElMessageBox.confirm('确定要删除这个行程点吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
     })
-    
+
     await tripStore.deleteTripDetail(tripId.value, detail.id)
     ElMessage.success('行程点删除成功')
   } catch (error) {
@@ -280,7 +284,7 @@ const fetchData = async () => {
     router.push('/login')
     return
   }
-  
+
   // 获取行程详情
   await tripStore.fetchTripById(tripId.value)
   await tripStore.fetchTripDetails(tripId.value)

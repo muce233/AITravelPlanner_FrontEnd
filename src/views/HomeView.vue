@@ -7,15 +7,19 @@
       <h2>地图视图</h2>
       <div class="map-placeholder">地图将在这里显示</div>
     </div>
-    
+
     <!-- 快速创建行程入口 -->
     <div class="quick-create-section">
       <el-button type="primary" size="large" @click="$router.push('/trips/create')">
         <el-icon><Plus /></el-icon>
         快速创建行程
       </el-button>
+      <el-button type="success" size="large" @click="$router.push('/chat')">
+        <el-icon><ChatDotRound /></el-icon>
+        开始聊天
+      </el-button>
     </div>
-    
+
     <!-- 历史行程列表 -->
     <div class="trips-section">
       <h2>历史行程</h2>
@@ -36,16 +40,14 @@
                 <el-button type="primary" @click="$router.push(`/trips/${trip.id}`)">
                   查看详情
                 </el-button>
-                <el-button @click="$router.push(`/trips/${trip.id}/budget`)">
-                  预算管理
-                </el-button>
+                <el-button @click="$router.push(`/trips/${trip.id}/budget`)"> 预算管理 </el-button>
               </el-button-group>
             </el-card>
           </el-timeline-item>
         </el-timeline>
       </el-card>
     </div>
-    
+
     <!-- 语音输入按钮 -->
     <div class="voice-input-section">
       <el-button circle type="success" size="large">
@@ -58,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, Microphone } from '@element-plus/icons-vue'
+import { Plus, Microphone, ChatDotRound } from '@element-plus/icons-vue'
 import { useTripStore } from '../stores/trip'
 import { useUserStore } from '../stores/user'
 

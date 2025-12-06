@@ -60,7 +60,7 @@ export const useTripStore = defineStore('trip', () => {
   async function fetchTrips() {
     try {
       const response = await apiClient.get('/trips')
-      trips.value = response
+      trips.value = response.data
       return response
     } catch (error) {
       console.error('Failed to fetch trips:', error)
@@ -71,7 +71,7 @@ export const useTripStore = defineStore('trip', () => {
   async function fetchTripById(tripId: number) {
     try {
       const response = await apiClient.get(`/trips/${tripId}`)
-      currentTrip.value = response
+      currentTrip.value = response.data
       return response
     } catch (error) {
       console.error(`Failed to fetch trip ${tripId}:`, error)
@@ -79,11 +79,13 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function createTrip(tripData: Omit<Trip, 'id' | 'user_id' | 'actual_expense' | 'created_at' | 'updated_at'>) {
+  async function createTrip(
+    tripData: Omit<Trip, 'id' | 'user_id' | 'actual_expense' | 'created_at' | 'updated_at'>,
+  ) {
     try {
       const response = await apiClient.post('/trips', tripData)
-      trips.value.push(response)
-      return response
+      trips.value.push(response.data)
+      return response.data
     } catch (error) {
       console.error('Failed to create trip:', error)
       throw error
@@ -93,14 +95,15 @@ export const useTripStore = defineStore('trip', () => {
   async function updateTrip(tripId: number, tripData: Partial<Trip>) {
     try {
       const response = await apiClient.put(`/trips/${tripId}`, tripData)
-      const index = trips.value.findIndex(t => t.id === tripId)
+      const index = trips.value.findIndex((t) => t.id === tripId)
       if (index !== -1) {
-        trips.value[index] = response
+        trips.value[index] = response.data
       }
+      // 更新当前行程
       if (currentTrip.value?.id === tripId) {
-        currentTrip.value = response
+        currentTrip.value = response.data
       }
-      return response
+      return response.data
     } catch (error) {
       console.error(`Failed to update trip ${tripId}:`, error)
       throw error
@@ -110,7 +113,7 @@ export const useTripStore = defineStore('trip', () => {
   async function deleteTrip(tripId: number) {
     try {
       await apiClient.delete(`/trips/${tripId}`)
-      trips.value = trips.value.filter(t => t.id !== tripId)
+      trips.value = trips.value.filter((t) => t.id !== tripId)
       if (currentTrip.value?.id === tripId) {
         currentTrip.value = null
         tripDetails.value = []
@@ -136,7 +139,7 @@ export const useTripStore = defineStore('trip', () => {
   async function fetchTripDetails(tripId: number) {
     try {
       const response = await apiClient.get(`/trips/${tripId}/details`)
-      tripDetails.value = response
+      tripDetails.value = response.data
       return response
     } catch (error) {
       console.error(`Failed to fetch trip details for ${tripId}:`, error)
@@ -147,22 +150,26 @@ export const useTripStore = defineStore('trip', () => {
   async function createTripDetail(tripId: number, detailData: Omit<TripDetail, 'id' | 'trip_id'>) {
     try {
       const response = await apiClient.post(`/trips/${tripId}/details`, detailData)
-      tripDetails.value.push(response)
-      return response
+      tripDetails.value.push(response.data)
+      return response.data
     } catch (error) {
       console.error(`Failed to create trip detail for ${tripId}:`, error)
       throw error
     }
   }
 
-  async function updateTripDetail(tripId: number, detailId: number, detailData: Partial<TripDetail>) {
+  async function updateTripDetail(
+    tripId: number,
+    detailId: number,
+    detailData: Partial<TripDetail>,
+  ) {
     try {
       const response = await apiClient.put(`/trips/${tripId}/details/${detailId}`, detailData)
-      const index = tripDetails.value.findIndex(d => d.id === detailId)
+      const index = tripDetails.value.findIndex((d) => d.id === detailId)
       if (index !== -1) {
-        tripDetails.value[index] = response
+        tripDetails.value[index] = response.data
       }
-      return response
+      return response.data
     } catch (error) {
       console.error(`Failed to update trip detail ${detailId} for ${tripId}:`, error)
       throw error
@@ -172,7 +179,7 @@ export const useTripStore = defineStore('trip', () => {
   async function deleteTripDetail(tripId: number, detailId: number) {
     try {
       await apiClient.delete(`/trips/${tripId}/details/${detailId}`)
-      tripDetails.value = tripDetails.value.filter(d => d.id !== detailId)
+      tripDetails.value = tripDetails.value.filter((d) => d.id !== detailId)
     } catch (error) {
       console.error(`Failed to delete trip detail ${detailId} for ${tripId}:`, error)
       throw error
@@ -183,7 +190,7 @@ export const useTripStore = defineStore('trip', () => {
   async function fetchExpenses(tripId: number) {
     try {
       const response = await apiClient.get(`/trips/${tripId}/expenses`)
-      expenses.value = response
+      expenses.value = response.data
       return response
     } catch (error) {
       console.error(`Failed to fetch expenses for ${tripId}:`, error)
@@ -194,12 +201,14 @@ export const useTripStore = defineStore('trip', () => {
   async function createExpense(tripId: number, expenseData: Omit<Expense, 'id' | 'trip_id'>) {
     try {
       const response = await apiClient.post(`/trips/${tripId}/expenses`, expenseData)
-      expenses.value.push(response)
+      const newExpense = response.data
+      expenses.value.push(newExpense)
       // 更新当前行程的实际支出
       if (currentTrip.value?.id === tripId) {
-        currentTrip.value.actual_expense = response.trip?.actual_expense || currentTrip.value.actual_expense
+        currentTrip.value.actual_expense =
+          response.data.trip?.actual_expense || currentTrip.value.actual_expense
       }
-      return response
+      return response.data
     } catch (error) {
       console.error(`Failed to create expense for ${tripId}:`, error)
       throw error
@@ -209,15 +218,16 @@ export const useTripStore = defineStore('trip', () => {
   async function updateExpense(tripId: number, expenseId: number, expenseData: Partial<Expense>) {
     try {
       const response = await apiClient.put(`/trips/${tripId}/expenses/${expenseId}`, expenseData)
-      const index = expenses.value.findIndex(e => e.id === expenseId)
+      const index = expenses.value.findIndex((e) => e.id === expenseId)
       if (index !== -1) {
-        expenses.value[index] = response
+        expenses.value[index] = response.data
       }
       // 更新当前行程的实际支出
       if (currentTrip.value?.id === tripId) {
-        currentTrip.value.actual_expense = response.trip?.actual_expense || currentTrip.value.actual_expense
+        currentTrip.value.actual_expense =
+          response.data.trip?.actual_expense || currentTrip.value.actual_expense
       }
-      return response
+      return response.data
     } catch (error) {
       console.error(`Failed to update expense ${expenseId} for ${tripId}:`, error)
       throw error
@@ -227,7 +237,7 @@ export const useTripStore = defineStore('trip', () => {
   async function deleteExpense(tripId: number, expenseId: number) {
     try {
       await apiClient.delete(`/trips/${tripId}/expenses/${expenseId}`)
-      expenses.value = expenses.value.filter(e => e.id !== expenseId)
+      expenses.value = expenses.value.filter((e) => e.id !== expenseId)
       // 更新当前行程的实际支出
       if (currentTrip.value?.id === tripId) {
         const totalExpense = expenses.value.reduce((sum, e) => sum + e.amount, 0)
@@ -283,6 +293,6 @@ export const useTripStore = defineStore('trip', () => {
     deleteExpense,
     getBudgetAnalysis,
     // 辅助操作
-    reset
+    reset,
   }
 })
