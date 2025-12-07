@@ -31,42 +31,7 @@ Authorization: Bearer <your_jwt_token>
 
 ## API端点
 
-### 1. 获取API状态
 
-**GET** `/api/chat/status`
-
-获取API服务状态和可用模型列表。
-
-**响应示例**:
-```json
-{
-  "status": "active",
-  "version": "1.0.0",
-  "models": [
-    "chat-model",
-    "coder-model",
-    "reasoner-model"
-  ],
-  "rate_limit": {
-    "requests_per_minute": 1000,
-    "remaining_requests": 950
-  }
-}
-```
-
-### 2. 获取模型列表
-
-**GET** `/api/chat/models`
-
-获取所有可用的AI模型列表。
-
-**响应示例**:
-```json
-{
-  "data": [
-    {
-      "id": "chat-model",
-      "object": "model",
       "created": 1700000000,
       "owned_by": "chat-service"
     },
@@ -209,13 +174,6 @@ data: [DONE]
 
 ### JavaScript 示例
 ```javascript
-// 获取API状态
-const response = await fetch('/api/chat/status', {
-  headers: {
-    'Authorization': 'Bearer ' + token
-  }
-});
-
 // 发送聊天请求
 const chatResponse = await fetch('/api/chat/completions', {
   method: 'POST',
@@ -233,12 +191,6 @@ const chatResponse = await fetch('/api/chat/completions', {
 ### Python 示例
 ```python
 import requests
-
-# 获取API状态
-response = requests.get(
-    '/api/chat/status',
-    headers={'Authorization': f'Bearer {token}'}
-)
 
 # 发送聊天请求
 chat_response = requests.post(

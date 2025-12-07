@@ -97,15 +97,7 @@ export interface ConversationsResponse {
 class ChatService {
   private baseURL = '/chat'
 
-  async getApiStatus(): Promise<ApiStatus> {
-    const response = await apiClient.get('/chat/status')
-    return response.data
-  }
 
-  async getModels(): Promise<ModelList> {
-    const response = await apiClient.get('/chat/models')
-    return response.data
-  }
 
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
     const response = await apiClient.post('/chat/completions', request)
@@ -205,7 +197,8 @@ class ChatService {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.getApiStatus()
+      // 尝试获取对话列表来测试连接
+      await apiClient.get('/chat/conversations?page=1&page_size=1')
       return true
     } catch (error) {
       console.error('Connection test failed:', error)
