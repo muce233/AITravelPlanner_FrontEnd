@@ -70,6 +70,30 @@ export interface ModelList {
   }>
 }
 
+// 对话相关接口
+export interface Conversation {
+  id: string
+  title: string
+  user_id: number
+  messages: ChatMessage[]
+  created_at: string
+  updated_at: string
+  model: string
+  is_active: boolean
+}
+
+export interface CreateConversationRequest {
+  title: string
+  model?: string
+}
+
+export interface ConversationsResponse {
+  conversations: Conversation[]
+  total: number
+  page: number
+  page_size: number
+}
+
 class ChatService {
   private baseURL = '/chat'
 
@@ -107,11 +131,12 @@ class ChatService {
         },
       })
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const reader = response.body?.getReader()
+      // 对于流式响应，axios返回的是ReadableStream
+      const reader = (response.data as ReadableStream).getReader?.()
       const decoder = new TextDecoder()
 
       if (!reader) {
@@ -156,6 +181,26 @@ class ChatService {
     } catch (error) {
       onError(error instanceof Error ? error : new Error('Unknown error'))
     }
+  }
+
+  // 对话管理相关方法
+  async getConversations(): Promise<ConversationsResponse> {
+    const response = await apiClient.get('/chat/conversations')
+    return response.data
+  }
+
+  async createConversation(request: CreateConversationRequest): Promise<Conversation> {
+    const response = await apiClient.post('/chat/conversations', request)
+    return response.data
+  }
+
+  async getConversation(conversationId: string): Promise<Conversation> {
+    const response = await apiClient.get(`/chat/conversations/${conversationId}`)
+    return response.data
+  }
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    await apiClient.delete(`/chat/conversations/${conversationId}`)
   }
 
   async testConnection(): Promise<boolean> {

@@ -2,12 +2,28 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { chatService, type ChatMessage, type ChatRequest } from '../services/chatService'
 
+export interface Conversation {
+  id: string
+  title: string
+  user_id: number
+  messages: ChatMessage[]
+  created_at: string
+  updated_at: string
+  model: string
+  is_active: boolean
+}
+
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
   const isLoading = ref(false)
   const isStreaming = ref(false)
   const error = ref<string | null>(null)
   const currentStreamContent = ref('')
+  
+  // 对话管理相关状态
+  const conversations = ref<Conversation[]>([])
+  const currentConversation = ref<Conversation | null>(null)
+  const isConversationLoading = ref(false)
 
   const addMessage = (message: ChatMessage) => {
     messages.value.push(message)
@@ -17,6 +33,68 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = []
     currentStreamContent.value = ''
     error.value = null
+  }
+
+  // 设置当前对话
+  const setCurrentConversation = (conversation: Conversation) => {
+    currentConversation.value = conversation
+    messages.value = conversation.messages || []
+  }
+
+  // 获取对话列表
+  const getConversations = async (): Promise<Conversation[]> => {
+    try {
+      isConversationLoading.value = true
+      const response = await chatService.getConversations()
+      conversations.value = response.conversations || []
+      return conversations.value
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '获取对话列表失败'
+      return []
+    } finally {
+      isConversationLoading.value = false
+    }
+  }
+
+  // 创建新对话
+  const createConversation = async (title: string): Promise<Conversation> => {
+    try {
+      const conversation = await chatService.createConversation({ title })
+      conversations.value.unshift(conversation)
+      currentConversation.value = conversation
+      messages.value = []
+      return conversation
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '创建对话失败'
+      throw err
+    }
+  }
+
+  // 获取对话详情
+  const getConversation = async (conversationId: string): Promise<Conversation> => {
+    try {
+      const conversation = await chatService.getConversation(conversationId)
+      return conversation
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '获取对话详情失败'
+      throw err
+    }
+  }
+
+  // 删除对话
+  const deleteConversation = async (conversationId: string): Promise<void> => {
+    try {
+      await chatService.deleteConversation(conversationId)
+      conversations.value = conversations.value.filter(c => c.id !== conversationId)
+      
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = null
+        messages.value = []
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '删除对话失败'
+      throw err
+    }
   }
 
   const sendMessage = async (content: string, useStream = true) => {
@@ -130,8 +208,16 @@ export const useChatStore = defineStore('chat', () => {
     isStreaming,
     error,
     currentStreamContent,
+    conversations,
+    currentConversation,
+    isConversationLoading,
     addMessage,
     clearMessages,
+    setCurrentConversation,
+    getConversations,
+    createConversation,
+    getConversation,
+    deleteConversation,
     sendMessage,
     testConnection
   }

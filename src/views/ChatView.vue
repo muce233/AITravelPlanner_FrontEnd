@@ -1,13 +1,54 @@
 <template>
   <div class="chat-container">
-    <!-- 页面标题 -->
-    <div class="chat-header">
-      <h1>AI聊天助手</h1>
-      <p>与智能助手进行实时对话，获取专业建议和帮助</p>
+    <!-- 移动端菜单按钮 -->
+    <div class="mobile-menu-button" v-if="isMobile" @click="showConversationList = !showConversationList">
+      <el-icon><More /></el-icon>
     </div>
+
+    <!-- 对话列表侧边栏 -->
+    <div class="conversation-sidebar" :class="{ 'mobile-visible': showConversationList }">
+      <div class="sidebar-header">
+        <h2>对话列表</h2>
+        <el-button type="primary" size="small" @click="handleCreateConversation">
+          <el-icon><Plus /></el-icon>
+          新对话
+        </el-button>
+      </div>
+
+      <div class="conversation-list">
+        <div
+          v-for="conversation in conversations"
+          :key="conversation.id"
+          :class="['conversation-item', { active: currentConversationId === conversation.id }]"
+          @click="handleSelectConversation(conversation.id)"
+        >
+          <div class="conversation-content">
+            <div class="conversation-title">{{ conversation.title }}</div>
+            <div class="conversation-preview">{{ getPreviewText(conversation) }}</div>
+            <div class="conversation-time">{{ formatTime(conversation.updated_at) }}</div>
+          </div>
+          <div class="conversation-actions" @click.stop="handleDeleteConversation(conversation.id)">
+            <el-icon class="delete-icon"><Close /></el-icon>
+          </div>
+        </div>
+
+        <div v-if="conversations.length === 0" class="empty-conversations">
+          <el-empty description="暂无对话" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 遮罩层（移动端） -->
+    <div v-if="isMobile && showConversationList" class="sidebar-overlay" @click="showConversationList = false"></div>
 
     <!-- 聊天主体区域 -->
     <div class="chat-main">
+      <!-- 页面标题 -->
+      <div class="chat-header">
+        <h1>AI聊天助手</h1>
+        <p>与智能助手进行实时对话，获取专业建议和帮助</p>
+      </div>
+
       <!-- 消息列表 -->
       <div class="messages-container" ref="messagesContainer">
         <div v-if="messages.length === 0" class="empty-state">
@@ -116,11 +157,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useUserStore } from '../stores/user'
-import { ChatDotRound, Promotion, Delete, Connection, Loading } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import {
+  ChatDotRound,
+  Promotion,
+  Delete,
+  Connection,
+  Loading,
+  More,
+  Plus,
+  Close
+} from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const chatStore = useChatStore()
 const userStore = useUserStore()
@@ -129,19 +179,129 @@ const inputMessage = ref('')
 const inputRef = ref<HTMLTextAreaElement>()
 const messagesContainer = ref<HTMLDivElement>()
 
-// 计算属性
-const messages = computed(() => chatStore.messages)
-const isLoading = computed(() => chatStore.isLoading)
-const isStreaming = computed(() => chatStore.isStreaming)
-const error = computed(() => chatStore.error)
+// 对话列表相关状态
+  const conversations = ref<any[]>([])
+  const currentConversationId = ref<string>('')
+  const showConversationList = ref(false)
 
-// 格式化消息时间
-const formatMessageTime = (index: number) => {
-  const now = new Date()
-  return now.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  // 移动端检测
+  const isMobile = ref(false)
+
+  // 监听窗口大小变化
+  const checkMobile = () => {
+    isMobile.value = window.innerWidth <= 768
+  }
+
+  // 加载对话列表
+  const loadConversations = async () => {
+    try {
+      const conversationList = await chatStore.getConversations()
+      conversations.value = conversationList
+    } catch (error) {
+      console.error('加载对话列表失败:', error)
+    }
+  }
+
+  // 获取预览文本
+  const getPreviewText = (conversation: any): string => {
+    if (conversation.messages && conversation.messages.length > 0) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1]
+      const preview = lastMessage.content.slice(0, 20)
+      return lastMessage.content.length > 20 ? preview + '...' : preview
+    }
+    return '暂无消息'
+  }
+
+  // 格式化时间
+  const formatTime = (timestamp: string): string => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (days === 0) {
+      return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    } else if (days === 1) {
+      return '昨天'
+    } else if (days < 7) {
+      return `${days}天前`
+    } else {
+      return date.toLocaleDateString('zh-CN')
+    }
+  }
+
+  // 计算属性
+  const messages = computed(() => chatStore.messages)
+  const isLoading = computed(() => chatStore.isLoading)
+  const isStreaming = computed(() => chatStore.isStreaming)
+  const error = computed(() => chatStore.error)
+
+  // 格式化消息时间
+  const formatMessageTime = (index: number) => {
+    const now = new Date()
+    return now.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+// 创建新对话
+const handleCreateConversation = async () => {
+  try {
+    const newConversation = await chatStore.createConversation('新对话')
+    conversations.value.unshift(newConversation)
+    await handleSelectConversation(newConversation.id)
+
+    if (isMobile.value) {
+      showConversationList.value = false
+    }
+
+    ElMessage.success('对话创建成功')
+  } catch (error) {
+    ElMessage.error('创建对话失败')
+  }
+}
+
+// 选择对话
+const handleSelectConversation = async (conversationId: string) => {
+  try {
+    const conversation = await chatStore.getConversation(conversationId)
+    currentConversationId.value = conversationId
+    chatStore.setCurrentConversation(conversation)
+
+    if (isMobile.value) {
+      showConversationList.value = false
+    }
+
+    inputRef.value?.focus()
+  } catch (error) {
+    ElMessage.error('加载对话失败')
+  }
+}
+
+// 删除对话
+const handleDeleteConversation = async (conversationId: string) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个对话吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    await chatStore.deleteConversation(conversationId)
+    conversations.value = conversations.value.filter(c => c.id !== conversationId)
+
+    if (currentConversationId.value === conversationId) {
+      currentConversationId.value = ''
+      chatStore.clearMessages()
+    }
+
+    ElMessage.success('对话删除成功')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除对话失败')
+    }
+  }
 }
 
 // 发送消息
@@ -151,7 +311,15 @@ const handleSendMessage = async () => {
   const message = inputMessage.value.trim()
   inputMessage.value = ''
 
+  // 如果没有当前对话，创建新对话
+  if (!currentConversationId.value) {
+    await handleCreateConversation()
+  }
+
   await chatStore.sendMessage(message, true)
+
+  // 更新对话列表
+  await loadConversations()
 
   // 滚动到底部
   await nextTick()
@@ -204,9 +372,15 @@ watch(isStreaming, (newVal) => {
   }
 })
 
+// 窗口大小变化监听
+const handleResize = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
 // 初始化
 onMounted(() => {
   inputRef.value?.focus()
+  window.addEventListener('resize', handleResize)
 
   // 检查用户登录状态
   if (!userStore.isAuthenticated) {
@@ -214,7 +388,15 @@ onMounted(() => {
     setTimeout(() => {
       window.location.href = '/login'
     }, 2000)
+  } else {
+    // 加载对话列表
+    loadConversations()
   }
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -222,8 +404,155 @@ onMounted(() => {
 .chat-container {
   height: 100vh;
   display: flex;
-  flex-direction: column;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+/* 移动端菜单按钮 */
+.mobile-menu-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1002;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-menu-button .el-icon {
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+/* 对话列表侧边栏 */
+.conversation-sidebar {
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.conversation-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.2s;
+}
+
+.conversation-item:hover {
+  background-color: #f8f9fa;
+}
+
+.conversation-item.active {
+  background-color: #e3f2fd;
+  border-left: 3px solid #007bff;
+}
+
+.conversation-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-title {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-preview {
+  color: #7f8c8d;
+  font-size: 12px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-time {
+  color: #bdc3c7;
+  font-size: 11px;
+}
+
+.conversation-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+
+.conversation-item:hover .conversation-actions {
+  opacity: 1;
+}
+
+.delete-icon {
+  color: #e74c3c;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.delete-icon:hover {
+  color: #c0392b;
+}
+
+.empty-conversations {
+  padding: 40px 20px;
+  text-align: center;
+  color: #7f8c8d;
+}
+
+/* 遮罩层 */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+/* 聊天主体区域 */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 300px);
+  width: 100%;
 }
 
 .chat-header {
@@ -246,24 +575,12 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  padding: 20px;
-}
-
 .messages-container {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
   background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .empty-state {
@@ -390,9 +707,8 @@ onMounted(() => {
 
 .input-container {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .error-message {
@@ -413,8 +729,27 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .chat-container {
+    flex-direction: column;
+  }
+
+  .conversation-sidebar {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    height: 100vh;
+    width: 280px;
+    transition: left 0.3s ease;
+    z-index: 1001;
+  }
+
+  .conversation-sidebar.mobile-visible {
+    left: 0;
+  }
+
   .chat-main {
-    padding: 10px;
+    max-width: 100%;
+    padding: 0;
   }
 
   .messages-container {
@@ -446,6 +781,15 @@ onMounted(() => {
   .message-bubble {
     padding: 10px 14px;
     font-size: 13px;
+  }
+
+  .conversation-sidebar {
+    width: 100%;
+    left: -100%;
+  }
+
+  .conversation-sidebar.mobile-visible {
+    left: 0;
   }
 }
 </style>
