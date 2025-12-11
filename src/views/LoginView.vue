@@ -7,7 +7,7 @@
           <p>欢迎使用AI旅行规划师</p>
         </div>
       </template>
-      
+
       <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" label-position="top">
         <el-form-item label="用户名或手机号" prop="username">
           <el-input
@@ -16,7 +16,7 @@
             prefix-icon="User"
           />
         </el-form-item>
-        
+
         <el-form-item label="密码" prop="password">
           <el-input
             v-model="loginForm.password"
@@ -26,7 +26,7 @@
             show-password
           />
         </el-form-item>
-        
+
         <el-form-item>
           <el-button
             type="primary"
@@ -38,7 +38,7 @@
             登录
           </el-button>
         </el-form-item>
-        
+
         <div class="login-footer">
           <p>还没有账号？<el-link type="primary" @click="$router.push('/register')">立即注册</el-link></p>
         </div>
@@ -76,15 +76,15 @@ const loginRules = ref<FormRules>({
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
-  
+
   try {
     await loginFormRef.value.validate()
     loading.value = true
-    
+
     await userStore.login(loginForm.value.username, loginForm.value.password)
-    
+
     ElMessage.success('登录成功')
-    router.push('/')
+    router.push('/chat')
   } catch (error: any) {
     if (error.response) {
       ElMessage.error(error.response.data.detail || '登录失败')
