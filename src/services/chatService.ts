@@ -1,4 +1,4 @@
-import { apiClient } from '../utils/axios'
+import { apiClient, streamClient } from '../utils/axios'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -115,64 +115,14 @@ class ChatService {
       stream: true,
     }
 
-    try {
-      const response = await apiClient.post(`/chat/completions/stream`, requestBody, {
-        responseType: 'stream',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.status !== 200) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      // 对于流式响应，axios返回的是ReadableStream
-      const reader = (response.data as ReadableStream).getReader?.()
-      const decoder = new TextDecoder()
-
-      if (!reader) {
-        throw new Error('No reader available')
-      }
-
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-
-        if (done) {
-          onComplete()
-          break
-        }
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          const trimmedLine = line.trim()
-
-          if (trimmedLine === '') continue
-          if (trimmedLine === '[DONE]') {
-            onComplete()
-            return
-          }
-
-          if (trimmedLine.startsWith('data: ')) {
-            const jsonStr = trimmedLine.slice(6)
-
-            try {
-              const chunk: ChatChunk = JSON.parse(jsonStr)
-              onChunk(chunk)
-            } catch (error) {
-              console.error('Error parsing chunk:', error)
-            }
-          }
-        }
-      }
-    } catch (error) {
-      onError(error instanceof Error ? error : new Error('Unknown error'))
-    }
+    // 使用统一的流式客户端
+    await streamClient.post<ChatChunk>(
+      '/chat/completions/stream',
+      requestBody,
+      onChunk,
+      onComplete,
+      onError
+    )
   }
 
   // 对话管理相关方法

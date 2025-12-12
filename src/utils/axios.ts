@@ -9,6 +9,78 @@ export const apiClient = axios.create({
   }
 })
 
+// 流式请求函数
+export const streamClient = {
+  async post<T>(
+    url: string,
+    data?: any,
+    onMessage?: (chunk: T) => void,
+    onComplete?: () => void,
+    onError?: (error: Error) => void
+  ) {
+    const token = localStorage.getItem('token')
+
+    try {
+      const response = await fetch(`${apiClient.defaults.baseURL}${url}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          onComplete?.()
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmedLine = line.trim()
+
+          if (trimmedLine === '') continue
+          if (trimmedLine === '[DONE]') {
+            onComplete?.()
+            return
+          }
+
+          if (trimmedLine.startsWith('data: ')) {
+            const jsonStr = trimmedLine.slice(6)
+
+            try {
+              const chunk = JSON.parse(jsonStr) as T
+              onMessage?.(chunk)
+            } catch (error) {
+              console.error('Error parsing chunk:', error)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      onError?.(error instanceof Error ? error : new Error('Unknown error'))
+    }
+  }
+}
+
 // 请求拦截器
 apiClient.interceptors.request.use(
   config => {
