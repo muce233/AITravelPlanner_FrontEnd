@@ -381,17 +381,9 @@ const handleResize = () => {
 onMounted(() => {
   inputRef.value?.focus()
   window.addEventListener('resize', handleResize)
-
-  // 检查用户登录状态
-  if (!userStore.isAuthenticated) {
-    ElMessage.warning('请先登录后再使用聊天功能')
-    setTimeout(() => {
-      window.location.href = '/login'
-    }, 2000)
-  } else {
-    // 加载对话列表
-    loadConversations()
-  }
+  
+  // 加载对话列表
+  loadConversations()
 })
 
 // 组件卸载时清理
