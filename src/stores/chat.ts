@@ -153,11 +153,7 @@ export const useChatStore = defineStore('chat', () => {
     addMessage(assistantMessage)
 
     const request: ChatRequest = {
-      messages: requestMessages,
-      model: 'chat-model',
-      temperature: 0.7,
-      max_tokens: 2048,
-      stream: true
+      messages: requestMessages
     }
 
     try {

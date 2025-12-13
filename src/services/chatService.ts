@@ -8,15 +8,6 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   messages: ChatMessage[]
-  model: string
-  temperature?: number
-  max_tokens?: number
-  top_p?: number
-  frequency_penalty?: number
-  presence_penalty?: number
-  stop?: string[]
-  stream?: boolean
-  user?: string
 }
 
 export interface ChatResponse {
@@ -84,7 +75,6 @@ export interface Conversation {
 
 export interface CreateConversationRequest {
   title: string
-  model?: string
 }
 
 export interface ConversationsResponse {
@@ -105,15 +95,10 @@ class ChatService {
     onComplete: () => void,
     onError: (error: Error) => void,
   ) {
-    const requestBody = {
-      ...request,
-      stream: true,
-    }
-
     // 使用统一的流式客户端
     await streamClient.post<ChatChunk>(
       '/chat/completions/stream',
-      requestBody,
+      request,
       onChunk,
       onComplete,
       onError
