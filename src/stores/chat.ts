@@ -102,6 +102,7 @@ export const useChatStore = defineStore('chat', () => {
       // 更新对话的更新时间
       const conversation = conversations.value[index]
       if (conversation) {
+
         conversation.updated_at = new Date().toISOString()
 
         // 更新对话预览文本
@@ -109,10 +110,18 @@ export const useChatStore = defineStore('chat', () => {
           const latestMessage = messages.value[messages.value.length - 1]
           if (latestMessage) {
             // 截取最新消息的前30个字符作为预览
-            const previewText = latestMessage.content.slice(0, 30)
-            conversation.latest_message_preview = latestMessage.content.length > 30
+            let previewText = latestMessage.content.slice(0, 30)
+            previewText = latestMessage.content.length > 30
               ? previewText + '...'
               : previewText
+            // 如果是第一次消息，更新对话标题
+            console.log("messages.value.length",messages.value.length)
+            if(messages.value.length===1){
+              conversation.title = previewText
+              console.log("conversation.title", conversation.title )
+            }
+            // 更新对话最新消息预览
+            conversation.latest_message_preview = previewText
           }
         }
 
@@ -132,8 +141,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     addMessage(userMessage)
-
-    // 用户消息发送后立即更新对话列表预览
+    // 用户发送了信息 本地更新当前对话的排序
     if (currentConversation.value) {
       updateConversationOrder(currentConversation.value.id)
     }
@@ -174,7 +182,7 @@ export const useChatStore = defineStore('chat', () => {
           isLoading.value = false
           currentStreamContent.value = ''
 
-          // 本地更新当前对话的排序
+          // 流式响应后 本地更新当前对话的排序
           if (currentConversation.value) {
             updateConversationOrder(currentConversation.value.id)
           }

@@ -180,7 +180,6 @@ const inputRef = ref<HTMLTextAreaElement>()
 const messagesContainer = ref<HTMLDivElement>()
 
 // 对话列表相关状态
-  const conversations = ref<any[]>([])
   const currentConversationId = ref<string>('')
   const showConversationList = ref(false)
 
@@ -195,12 +194,11 @@ const messagesContainer = ref<HTMLDivElement>()
   // 加载对话列表
   const loadConversations = async () => {
     try {
-      const conversationList = await chatStore.getConversations()
-      conversations.value = conversationList
+      await chatStore.getConversations()
 
       // 如果有对话列表且没有当前选中的对话，自动选中第一个对话
-      if (conversations.value.length > 0 && !currentConversationId.value) {
-        await handleSelectConversation(conversations.value[0].id)
+      if (chatStore.conversations.length > 0 && !currentConversationId.value) {
+        await handleSelectConversation(chatStore.conversations[0].id)
       }
     } catch (error) {
       console.error('加载对话列表失败:', error)
@@ -241,6 +239,7 @@ const messagesContainer = ref<HTMLDivElement>()
   const isLoading = computed(() => chatStore.isLoading)
   const isStreaming = computed(() => chatStore.isStreaming)
   const error = computed(() => chatStore.error)
+  const conversations = computed(() => chatStore.conversations)
 
   // 格式化消息时间
   const formatMessageTime = (index: number) => {
