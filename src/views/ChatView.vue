@@ -422,11 +422,10 @@ onUnmounted(() => {
 /* 对话列表侧边栏 */
 .conversation-sidebar {
   width: 300px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(248, 249, 250, 0.98);
   border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   z-index: 1001;
 }
 
