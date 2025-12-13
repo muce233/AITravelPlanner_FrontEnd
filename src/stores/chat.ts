@@ -19,7 +19,7 @@ export const useChatStore = defineStore('chat', () => {
   const isStreaming = ref(false)
   const error = ref<string | null>(null)
   const currentStreamContent = ref('')
-  
+
   // 对话管理相关状态
   const conversations = ref<Conversation[]>([])
   const currentConversation = ref<Conversation | null>(null)
@@ -86,7 +86,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       await chatService.deleteConversation(conversationId)
       conversations.value = conversations.value.filter(c => c.id !== conversationId)
-      
+
       if (currentConversation.value?.id === conversationId) {
         currentConversation.value = null
         messages.value = []
@@ -110,16 +110,16 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
 
     const requestMessages: ChatMessage[] = [...messages.value]
-    
+
     if (useStream) {
       isStreaming.value = true
       currentStreamContent.value = ''
-      
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: ''
       }
-      
+
       addMessage(assistantMessage)
 
       const request: ChatRequest = {
@@ -146,6 +146,8 @@ export const useChatStore = defineStore('chat', () => {
             isStreaming.value = false
             isLoading.value = false
             currentStreamContent.value = ''
+            // 发送消息后刷新对话列表
+            getConversations()
           },
           (err) => {
             error.value = err.message
@@ -183,8 +185,10 @@ export const useChatStore = defineStore('chat', () => {
           role: 'assistant',
           content: response.choices[0]?.message?.content || '抱歉，我没有理解您的问题。'
         }
-        
+
         addMessage(assistantMessage)
+        // 发送消息后刷新对话列表
+        getConversations()
       } catch (err) {
         error.value = err instanceof Error ? err.message : '发送消息失败'
       } finally {

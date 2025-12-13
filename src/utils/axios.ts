@@ -68,6 +68,13 @@ export const streamClient = {
 
             try {
               const chunk = JSON.parse(jsonStr) as T
+              
+              // 检查是否有错误信息
+              if (chunk && (chunk as any).error) {
+                onError?.(new Error((chunk as any).error))
+                return
+              }
+              
               onMessage?.(chunk)
             } catch (error) {
               console.error('Error parsing chunk:', error)
