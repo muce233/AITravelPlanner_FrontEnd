@@ -141,14 +141,6 @@
               <el-icon><Promotion /></el-icon>
               发送
             </el-button>
-            <el-button @click="handleClearMessages" :disabled="messages.length === 0">
-              <el-icon><Delete /></el-icon>
-              清空对话
-            </el-button>
-            <el-button type="info" @click="handleTestConnection">
-              <el-icon><Connection /></el-icon>
-              测试连接
-            </el-button>
           </div>
         </div>
       </div>
@@ -163,8 +155,6 @@ import { useUserStore } from '../stores/user'
 import {
   ChatDotRound,
   Promotion,
-  Delete,
-  Connection,
   Loading,
   More,
   Plus,
@@ -197,7 +187,7 @@ const messagesContainer = ref<HTMLDivElement>()
       await chatStore.getConversations()
 
       // 如果有对话列表且没有当前选中的对话，自动选中第一个对话
-      if (chatStore.conversations.length > 0 && !currentConversationId.value) {
+      if (chatStore.conversations.length > 0 && !currentConversationId.value && chatStore.conversations[0]) {
         await handleSelectConversation(chatStore.conversations[0].id)
       }
     } catch (error) {
@@ -333,22 +323,6 @@ const handleSendMessage = async () => {
   // 滚动到底部
   await nextTick()
   scrollToBottom()
-}
-
-// 清空对话
-const handleClearMessages = () => {
-  chatStore.clearMessages()
-  inputRef.value?.focus()
-}
-
-// 测试连接
-const handleTestConnection = async () => {
-  const isConnected = await chatStore.testConnection()
-  if (isConnected) {
-    ElMessage.success('连接测试成功！')
-  } else {
-    ElMessage.error('连接测试失败，请检查网络连接')
-  }
 }
 
 // 滚动到底部

@@ -210,15 +210,6 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  const testConnection = async (): Promise<boolean> => {
-    try {
-      return await chatService.testConnection()
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '连接测试失败'
-      return false
-    }
-  }
-
   return {
     messages,
     isLoading,
@@ -236,7 +227,6 @@ export const useChatStore = defineStore('chat', () => {
     getConversation,
     deleteConversation,
     sendMessage,
-    testConnection,
     updateConversationOrder
   }
 })

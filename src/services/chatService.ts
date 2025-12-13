@@ -128,17 +128,6 @@ class ChatService {
   async deleteConversation(conversationId: string): Promise<void> {
     await apiClient.delete(`/chat/conversations/${conversationId}`)
   }
-
-  async testConnection(): Promise<boolean> {
-    try {
-      // 尝试获取对话列表来测试连接
-      await apiClient.get('/chat/conversations?page=1&page_size=1')
-      return true
-    } catch (error) {
-      console.error('Connection test failed:', error)
-      return false
-    }
-  }
 }
 
 export const chatService = new ChatService()
