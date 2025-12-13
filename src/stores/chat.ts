@@ -53,8 +53,13 @@ export const useChatStore = defineStore('chat', () => {
       currentConversation.value = conversation
       messages.value = []
 
-      // 本地更新对话排序（新对话已经在开头）
-      updateConversationOrder(conversation.id)
+      // 为新对话设置初始预览文本
+      if (conversation) {
+        const previewText = title.slice(0, 30)
+        conversation.latest_message_preview = title.length > 30
+          ? previewText + '...'
+          : previewText
+      }
 
       return conversation
     } catch (err) {
@@ -90,7 +95,7 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // 本地更新对话列表排序
+  // 本地更新对话列表排序和预览
   const updateConversationOrder = (conversationId: string) => {
     const index = conversations.value.findIndex(c => c.id === conversationId)
     if (index !== -1) {
@@ -98,6 +103,18 @@ export const useChatStore = defineStore('chat', () => {
       const conversation = conversations.value[index]
       if (conversation) {
         conversation.updated_at = new Date().toISOString()
+
+        // 更新对话预览文本
+        if (messages.value.length > 0) {
+          const latestMessage = messages.value[messages.value.length - 1]
+          if (latestMessage) {
+            // 截取最新消息的前30个字符作为预览
+            const previewText = latestMessage.content.slice(0, 30)
+            conversation.latest_message_preview = latestMessage.content.length > 30
+              ? previewText + '...'
+              : previewText
+          }
+        }
 
         // 将该对话移到列表开头
         conversations.value.splice(index, 1)
