@@ -136,7 +136,7 @@
               type="primary"
               :loading="isLoading"
               @click="handleSendMessage"
-              :disabled="!inputMessage.trim()"
+              :disabled="!inputMessage.trim() || !currentConversationId"
             >
               <el-icon><Promotion /></el-icon>
               发送
@@ -197,6 +197,11 @@ const messagesContainer = ref<HTMLDivElement>()
     try {
       const conversationList = await chatStore.getConversations()
       conversations.value = conversationList
+
+      // 如果有对话列表且没有当前选中的对话，自动选中第一个对话
+      if (conversations.value.length > 0 && !currentConversationId.value) {
+        await handleSelectConversation(conversations.value[0].id)
+      }
     } catch (error) {
       console.error('加载对话列表失败:', error)
     }
@@ -309,13 +314,14 @@ const handleDeleteConversation = async (conversationId: string) => {
 const handleSendMessage = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return
 
+  // 检查是否选中了对话
+  if (!currentConversationId.value) {
+    ElMessage.warning('请先选择一个对话')
+    return
+  }
+
   const message = inputMessage.value.trim()
   inputMessage.value = ''
-
-  // 如果没有当前对话，创建新对话
-  if (!currentConversationId.value) {
-    await handleCreateConversation()
-  }
 
   await chatStore.sendMessage(message)
 
