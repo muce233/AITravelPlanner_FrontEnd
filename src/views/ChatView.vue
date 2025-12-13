@@ -204,12 +204,13 @@ const messagesContainer = ref<HTMLDivElement>()
 
   // 获取预览文本
   const getPreviewText = (conversation: any): string => {
-    if (conversation.messages && conversation.messages.length > 0) {
-      const lastMessage = conversation.messages[conversation.messages.length - 1]
-      const preview = lastMessage.content.slice(0, 20)
-      return lastMessage.content.length > 20 ? preview + '...' : preview
+    // 优先使用最新消息预览，如果没有则使用对话标题
+    if (conversation.latest_message_preview) {
+      return conversation.latest_message_preview
     }
-    return '暂无消息'
+    // 如果没有最新消息预览，使用对话标题作为预览文本
+    const preview = conversation.title.slice(0, 20)
+    return conversation.title.length > 20 ? preview + '...' : preview
   }
 
   // 格式化时间

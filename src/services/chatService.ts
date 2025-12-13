@@ -62,15 +62,19 @@ export interface ModelList {
 }
 
 // 对话相关接口
-export interface Conversation {
+export interface ConversationBasicInfo {
   id: string
   title: string
   user_id: number
-  messages: ChatMessage[]
   created_at: string
   updated_at: string
   model: string
   is_active: boolean
+  latest_message_preview?: string
+}
+
+export interface Conversation extends ConversationBasicInfo {
+  messages: ChatMessage[]
 }
 
 export interface CreateConversationRequest {
@@ -78,7 +82,7 @@ export interface CreateConversationRequest {
 }
 
 export interface ConversationsResponse {
-  conversations: Conversation[]
+  conversations: ConversationBasicInfo[]
   total: number
   page: number
   page_size: number

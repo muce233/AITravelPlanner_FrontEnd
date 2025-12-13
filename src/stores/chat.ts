@@ -1,17 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { chatService, type ChatMessage, type ChatRequest } from '../services/chatService'
-
-export interface Conversation {
-  id: string
-  title: string
-  user_id: number
-  messages: ChatMessage[]
-  created_at: string
-  updated_at: string
-  model: string
-  is_active: boolean
-}
+import { chatService, type ChatMessage, type ChatRequest, type ConversationBasicInfo, type Conversation } from '../services/chatService'
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -21,7 +10,7 @@ export const useChatStore = defineStore('chat', () => {
   const currentStreamContent = ref('')
 
   // 对话管理相关状态
-  const conversations = ref<Conversation[]>([])
+  const conversations = ref<ConversationBasicInfo[]>([])
   const currentConversation = ref<Conversation | null>(null)
   const isConversationLoading = ref(false)
 
@@ -41,8 +30,8 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = conversation.messages || []
   }
 
-  // 获取对话列表
-  const getConversations = async (): Promise<Conversation[]> => {
+  // 获取对话列表（只包含基本信息）
+  const getConversations = async (): Promise<ConversationBasicInfo[]> => {
     try {
       isConversationLoading.value = true
       const response = await chatService.getConversations()
@@ -101,7 +90,7 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // 本地更新对话列表排序和消息内容
+  // 本地更新对话列表排序
   const updateConversationOrder = (conversationId: string) => {
     const index = conversations.value.findIndex(c => c.id === conversationId)
     if (index !== -1) {
@@ -109,11 +98,6 @@ export const useChatStore = defineStore('chat', () => {
       const conversation = conversations.value[index]
       if (conversation) {
         conversation.updated_at = new Date().toISOString()
-
-        // 同步当前对话的最新消息到对话列表
-        if (currentConversation.value && currentConversation.value.id === conversationId) {
-          conversation.messages = [...currentConversation.value.messages]
-        }
 
         // 将该对话移到列表开头
         conversations.value.splice(index, 1)
