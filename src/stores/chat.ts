@@ -146,8 +146,6 @@ export const useChatStore = defineStore('chat', () => {
             isStreaming.value = false
             isLoading.value = false
             currentStreamContent.value = ''
-            // 发送消息后刷新对话列表
-            getConversations()
           },
           (err) => {
             error.value = err.message
@@ -187,8 +185,6 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         addMessage(assistantMessage)
-        // 发送消息后刷新对话列表
-        getConversations()
       } catch (err) {
         error.value = err instanceof Error ? err.message : '发送消息失败'
       } finally {
