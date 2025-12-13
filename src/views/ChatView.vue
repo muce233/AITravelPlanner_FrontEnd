@@ -249,7 +249,7 @@ const messagesContainer = ref<HTMLDivElement>()
 const handleCreateConversation = async () => {
   try {
     const newConversation = await chatStore.createConversation('新对话')
-    conversations.value.unshift(newConversation)
+    // 不需要手动添加到conversations.value，因为chatStore.createConversation已经处理了
     await handleSelectConversation(newConversation.id)
 
     if (isMobile.value) {
