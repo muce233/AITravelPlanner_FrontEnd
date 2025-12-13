@@ -318,9 +318,6 @@ const handleSendMessage = async () => {
 
   await chatStore.sendMessage(message, true)
 
-  // 更新对话列表
-  await loadConversations()
-
   // 滚动到底部
   await nextTick()
   scrollToBottom()
@@ -381,7 +378,7 @@ const handleResize = () => {
 onMounted(() => {
   inputRef.value?.focus()
   window.addEventListener('resize', handleResize)
-  
+
   // 加载对话列表
   loadConversations()
 })

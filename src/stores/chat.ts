@@ -63,6 +63,10 @@ export const useChatStore = defineStore('chat', () => {
       conversations.value.unshift(conversation)
       currentConversation.value = conversation
       messages.value = []
+
+      // 本地更新对话排序（新对话已经在开头）
+      updateConversationOrder(conversation.id)
+
       return conversation
     } catch (err) {
       error.value = err instanceof Error ? err.message : '创建对话失败'
@@ -97,6 +101,25 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // 本地更新对话列表排序和消息内容
+  const updateConversationOrder = (conversationId: string) => {
+    const index = conversations.value.findIndex(c => c.id === conversationId)
+    if (index !== -1) {
+      // 更新对话的更新时间
+      const conversation = conversations.value[index]
+      conversation.updated_at = new Date().toISOString()
+
+      // 同步当前对话的最新消息到对话列表
+      if (currentConversation.value && currentConversation.value.id === conversationId) {
+        conversation.messages = [...currentConversation.value.messages]
+      }
+
+      // 将该对话移到列表开头
+      conversations.value.splice(index, 1)
+      conversations.value.unshift(conversation)
+    }
+  }
+
   const sendMessage = async (content: string, useStream = true) => {
     if (!content.trim()) return
 
@@ -106,6 +129,12 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     addMessage(userMessage)
+
+    // 用户消息发送后立即更新对话列表预览
+    if (currentConversation.value) {
+      updateConversationOrder(currentConversation.value.id)
+    }
+
     isLoading.value = true
     error.value = null
 
@@ -146,6 +175,11 @@ export const useChatStore = defineStore('chat', () => {
             isStreaming.value = false
             isLoading.value = false
             currentStreamContent.value = ''
+
+            // 本地更新当前对话的排序
+            if (currentConversation.value) {
+              updateConversationOrder(currentConversation.value.id)
+            }
           },
           (err) => {
             error.value = err.message
@@ -185,6 +219,11 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         addMessage(assistantMessage)
+
+        // 本地更新当前对话的排序
+        if (currentConversation.value) {
+          updateConversationOrder(currentConversation.value.id)
+        }
       } catch (err) {
         error.value = err instanceof Error ? err.message : '发送消息失败'
       } finally {
@@ -219,6 +258,7 @@ export const useChatStore = defineStore('chat', () => {
     getConversation,
     deleteConversation,
     sendMessage,
-    testConnection
+    testConnection,
+    updateConversationOrder
   }
 })
