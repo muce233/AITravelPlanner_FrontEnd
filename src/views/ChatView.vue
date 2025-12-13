@@ -218,8 +218,15 @@ const messagesContainer = ref<HTMLDivElement>()
 
   // 格式化时间
   const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp)
     const now = new Date()
+    let date
+    if(timestamp){
+      date = new Date(timestamp)
+    }
+    else{
+      // 如果没有时间戳，默认使用当前时间
+      date = now
+    }
     const diff = now.getTime() - date.getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
@@ -294,7 +301,6 @@ const handleDeleteConversation = async (conversationId: string) => {
     })
 
     await chatStore.deleteConversation(conversationId)
-    conversations.value = conversations.value.filter(c => c.id !== conversationId)
 
     if (currentConversationId.value === conversationId) {
       currentConversationId.value = ''
