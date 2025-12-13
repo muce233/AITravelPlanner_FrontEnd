@@ -107,20 +107,22 @@ export const useChatStore = defineStore('chat', () => {
     if (index !== -1) {
       // 更新对话的更新时间
       const conversation = conversations.value[index]
-      conversation.updated_at = new Date().toISOString()
+      if (conversation) {
+        conversation.updated_at = new Date().toISOString()
 
-      // 同步当前对话的最新消息到对话列表
-      if (currentConversation.value && currentConversation.value.id === conversationId) {
-        conversation.messages = [...currentConversation.value.messages]
+        // 同步当前对话的最新消息到对话列表
+        if (currentConversation.value && currentConversation.value.id === conversationId) {
+          conversation.messages = [...currentConversation.value.messages]
+        }
+
+        // 将该对话移到列表开头
+        conversations.value.splice(index, 1)
+        conversations.value.unshift(conversation)
       }
-
-      // 将该对话移到列表开头
-      conversations.value.splice(index, 1)
-      conversations.value.unshift(conversation)
     }
   }
 
-  const sendMessage = async (content: string, useStream = true) => {
+  const sendMessage = async (content: string) => {
     if (!content.trim()) return
 
     const userMessage: ChatMessage = {
@@ -140,94 +142,65 @@ export const useChatStore = defineStore('chat', () => {
 
     const requestMessages: ChatMessage[] = [...messages.value]
 
-    if (useStream) {
-      isStreaming.value = true
-      currentStreamContent.value = ''
+    isStreaming.value = true
+    currentStreamContent.value = ''
 
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: ''
-      }
+    const assistantMessage: ChatMessage = {
+      role: 'assistant',
+      content: ''
+    }
 
-      addMessage(assistantMessage)
+    addMessage(assistantMessage)
 
-      const request: ChatRequest = {
-        messages: requestMessages,
-        model: 'chat-model',
-        temperature: 0.7,
-        max_tokens: 2048,
-        stream: true
-      }
+    const request: ChatRequest = {
+      messages: requestMessages,
+      model: 'chat-model',
+      temperature: 0.7,
+      max_tokens: 2048,
+      stream: true
+    }
 
-      try {
-        await chatService.sendMessageStream(
-          request,
-          (chunk) => {
-                  if (chunk.choices[0]?.delta?.content) {
-                    currentStreamContent.value += chunk.choices[0].delta.content
-                    const lastMessage = messages.value[messages.value.length - 1]
-                    if (lastMessage) {
-                      lastMessage.content = currentStreamContent.value
-                    }
+    try {
+      await chatService.sendMessageStream(
+        request,
+        (chunk) => {
+                if (chunk.choices[0]?.delta?.content) {
+                  currentStreamContent.value += chunk.choices[0].delta.content
+                  const lastMessage = messages.value[messages.value.length - 1]
+                  if (lastMessage) {
+                    lastMessage.content = currentStreamContent.value
                   }
-                },
-          () => {
-            isStreaming.value = false
-            isLoading.value = false
-            currentStreamContent.value = ''
+                }
+              },
+        () => {
+          isStreaming.value = false
+          isLoading.value = false
+          currentStreamContent.value = ''
 
-            // 本地更新当前对话的排序
-            if (currentConversation.value) {
-              updateConversationOrder(currentConversation.value.id)
-            }
-          },
-          (err) => {
-            error.value = err.message
-            isLoading.value = false
-            isStreaming.value = false
-            currentStreamContent.value = ''
-            // 移除空的助手消息
-            if (messages.value[messages.value.length - 1]?.content === '') {
-              messages.value.pop()
-            }
+          // 本地更新当前对话的排序
+          if (currentConversation.value) {
+            updateConversationOrder(currentConversation.value.id)
           }
-        )
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : '发送消息失败'
-        isLoading.value = false
-        isStreaming.value = false
-        currentStreamContent.value = ''
-        // 移除空的助手消息
-        if (messages.value[messages.value.length - 1]?.content === '') {
-          messages.value.pop()
+        },
+        (err) => {
+          error.value = err.message
+          isLoading.value = false
+          isStreaming.value = false
+          currentStreamContent.value = ''
+          // 移除空的助手消息
+          if (messages.value[messages.value.length - 1]?.content === '') {
+            messages.value.pop()
+          }
         }
-      }
-    } else {
-      const request: ChatRequest = {
-        messages: requestMessages,
-        model: 'chat-model',
-        temperature: 0.7,
-        max_tokens: 2048,
-        stream: false
-      }
-
-      try {
-        const response = await chatService.sendMessage(request)
-        const assistantMessage: ChatMessage = {
-          role: 'assistant',
-          content: response.choices[0]?.message?.content || '抱歉，我没有理解您的问题。'
-        }
-
-        addMessage(assistantMessage)
-
-        // 本地更新当前对话的排序
-        if (currentConversation.value) {
-          updateConversationOrder(currentConversation.value.id)
-        }
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : '发送消息失败'
-      } finally {
-        isLoading.value = false
+      )
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '发送消息失败'
+      isLoading.value = false
+      isStreaming.value = false
+      currentStreamContent.value = ''
+      // 移除空的助手消息
+      if (messages.value[messages.value.length - 1]?.content === '') {
+        messages.value.pop()
       }
     }
   }

@@ -316,7 +316,7 @@ const handleSendMessage = async () => {
     await handleCreateConversation()
   }
 
-  await chatStore.sendMessage(message, true)
+  await chatStore.sendMessage(message)
 
   // 滚动到底部
   await nextTick()

@@ -99,11 +99,6 @@ class ChatService {
 
 
 
-  async sendMessage(request: ChatRequest): Promise<ChatResponse> {
-    const response = await apiClient.post('/chat/completions', request)
-    return response.data
-  }
-
   async sendMessageStream(
     request: ChatRequest,
     onChunk: (chunk: ChatChunk) => void,
