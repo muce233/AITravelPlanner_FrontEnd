@@ -309,12 +309,6 @@ const handleDeleteConversation = async (conversationId: string) => {
 const handleSendMessage = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return
 
-  // 检查是否选中了对话
-  if (!currentConversationId.value) {
-    ElMessage.warning('请先选择一个对话')
-    return
-  }
-
   const message = inputMessage.value.trim()
   inputMessage.value = ''
 

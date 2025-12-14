@@ -135,6 +135,17 @@ export const useChatStore = defineStore('chat', () => {
   const sendMessage = async (content: string) => {
     if (!content.trim()) return
 
+    // 如果没有当前对话，自动创建一个新对话
+    if (!currentConversation.value) {
+      try {
+        const newConversation = await createConversation('新对话')
+        setCurrentConversation(newConversation)
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : '创建对话失败'
+        return
+      }
+    }
+
     const userMessage: ChatMessage = {
       role: 'user',
       content: content.trim()
