@@ -118,19 +118,32 @@
           <el-alert :title="error" type="error" :closable="true" @close="error = null" show-icon />
         </div>
 
+        <!-- 语音输入组件 -->
+        <div class="voice-input-wrapper">
+          <VoiceInput
+            @transcription="handleVoiceTranscription"
+            @interim-transcription="handleInterimTranscription"
+            @recording-started="handleRecordingStarted"
+            @recording-stopped="handleRecordingStopped"
+          />
+        </div>
+
         <!-- 输入框和操作按钮 -->
         <div class="input-area">
-          <el-input
-            v-model="inputMessage"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入您的问题..."
-            :maxlength="2000"
-            show-word-limit
-            @keydown.enter.exact.prevent="handleSendMessage"
-            ref="inputRef"
-            resize="none"
-          />
+          <div class="input-with-voice">
+            <el-input
+              v-model="inputMessage"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入您的问题..."
+              :maxlength="2000"
+              show-word-limit
+              @keydown.enter.exact.prevent="handleSendMessage"
+              ref="inputRef"
+              resize="none"
+            />
+          </div>
+
           <div class="input-actions">
             <el-button
               type="primary"
@@ -152,6 +165,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useUserStore } from '../stores/user'
+import VoiceInput from '../components/VoiceInput.vue'
 import {
   ChatDotRound,
   Promotion,
@@ -303,6 +317,31 @@ const handleDeleteConversation = async (conversationId: string) => {
       ElMessage.error('删除对话失败')
     }
   }
+}
+
+// 语音转录处理
+const handleVoiceTranscription = (text: string) => {
+  inputMessage.value = text
+  // 自动发送消息
+  handleSendMessage()
+}
+
+// 实时转录处理
+const handleInterimTranscription = (text: string) => {
+  // 可以在这里显示实时转录结果，例如在输入框上方显示
+  console.log('实时转录:', text)
+}
+
+// 录音开始处理
+const handleRecordingStarted = () => {
+  // 可以在这里显示录音状态
+  console.log('录音开始')
+}
+
+// 录音结束处理
+const handleRecordingStopped = () => {
+  // 可以在这里隐藏录音状态
+  console.log('录音结束')
 }
 
 // 发送消息
@@ -676,23 +715,50 @@ onUnmounted(() => {
 .input-container {
   background: rgba(255, 255, 255, 0.95);
   padding: 20px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #e0e0e0;
 }
 
 .error-message {
   margin-bottom: 16px;
 }
 
+.voice-input-wrapper {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+
 .input-area {
   display: flex;
-  flex-direction: column;
   gap: 12px;
+  align-items: flex-end;
+}
+
+.input-with-voice {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.input-with-voice .el-textarea {
+  flex: 1;
 }
 
 .input-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .voice-input-wrapper {
+    margin-bottom: 0;
+  }
+
+  .input-with-voice {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 /* 响应式设计 */
