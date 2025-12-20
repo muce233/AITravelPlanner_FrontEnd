@@ -45,10 +45,6 @@ export enum LanguageCode {
 // 语音识别请求接口
 export interface SpeechRecognitionRequest {
   audio_data: string  // base64编码的音频数据
-  model_type?: ASRModelType
-  language?: LanguageCode
-  sample_rate?: number
-  audio_format?: AudioFormat
 }
 
 // 语音识别响应接口
@@ -60,13 +56,7 @@ export interface SpeechRecognitionResponse {
   language: LanguageCode
 }
 
-// 实时语音识别配置
-export interface RealtimeConfig {
-  model_type?: ASRModelType
-  vad_enabled?: boolean
-  vad_threshold?: number
-  silence_duration_ms?: number
-}
+
 
 // 音频数据块
 export interface AudioChunkData {
@@ -85,16 +75,6 @@ export interface RealtimeTranscriptionResponse {
   model_type: ASRModelType
 }
 
-// 语音识别服务配置
-export interface SpeechServiceConfig {
-  max_duration: number
-  sample_rate: number
-  supported_languages: LanguageCode[]
-  supported_formats: AudioFormat[]
-  enabled_models: ASRModelType[]
-  default_model: ASRModelType
-}
-
 /**
  * 语音识别服务类
  */
@@ -109,24 +89,10 @@ export class SpeechRecognitionService {
   }
 
   /**
-   * 获取语音识别服务配置
-   */
-  async getConfig(): Promise<SpeechServiceConfig> {
-    try {
-      const response = await apiClient.get('/api/speech/config')
-      return response.data
-    } catch (error) {
-      console.error('获取语音识别配置失败:', error)
-      throw new Error('获取语音识别配置失败')
-    }
-  }
-
-  /**
    * 连接实时语音识别WebSocket
    */
   connectRealtime(
     sessionId: string,
-    config: RealtimeConfig,
     onTranscription: (response: RealtimeTranscriptionResponse) => void,
     onError: (error: string) => void,
     onClose: () => void
@@ -144,14 +110,6 @@ export class SpeechRecognitionService {
 
       this.websocket.onopen = () => {
         this.isConnected = true
-
-        // 发送配置信息
-        this.websocket?.send(JSON.stringify({
-          model_type: config.model_type || ASRModelType.FUN_ASR_REALTIME,
-          vad_enabled: config.vad_enabled ?? true,
-          vad_threshold: config.vad_threshold ?? 0.2,
-          silence_duration_ms: config.silence_duration_ms ?? 800
-        }))
       }
 
       this.websocket.onmessage = (event) => {

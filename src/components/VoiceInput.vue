@@ -148,11 +148,9 @@ const config = ref({
   maxDuration: 60,
   unlimited: false,
   countdownWarning: 10,
-  vadEnabled: true,
   sampleRate: 16000,
   channels: 1,
-  bitDepth: 16,
-  modelType: ASRModelType.FUN_ASR_REALTIME
+  bitDepth: 16
 })
 
 // 计算属性
@@ -197,16 +195,10 @@ const checkMicrophonePermission = async () => {
   }
 }
 
-// 获取配置
-const fetchConfig = async () => {
-  try {
-    const serviceConfig = await speechService.getConfig()
-    config.value.maxDuration = serviceConfig.max_duration
-    config.value.sampleRate = serviceConfig.sample_rate
-    config.value.modelType = serviceConfig.default_model
-  } catch (err) {
-    console.error('获取语音配置失败:', err)
-  }
+// 使用默认配置
+const useDefaultConfig = () => {
+  config.value.maxDuration = 60 // 默认最大时长60秒
+  config.value.sampleRate = 16000 // 默认采样率16kHz
 }
 
 // 处理转录结果
@@ -349,10 +341,6 @@ const startRecording = async () => {
     isConnecting.value = true
     const connected = speechService.connectRealtime(
       sessionId,
-      {
-        model_type: config.value.modelType,
-        vad_enabled: config.value.vadEnabled
-      },
       handleTranscription,
       handleRecognitionError,
       () => {
@@ -485,7 +473,7 @@ const emit = defineEmits<{
 onMounted(() => {
   checkDeviceType()
   checkMicrophonePermission()
-  fetchConfig()
+  useDefaultConfig()
 
   window.addEventListener('resize', checkDeviceType)
 })
