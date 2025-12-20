@@ -61,7 +61,7 @@ export interface SpeechRecognitionResponse {
 // 音频数据块
 export interface AudioChunkData {
   session_id: string
-  audio_data: string  // base64编码的音频数据
+  audio_data: ArrayBuffer  // 二进制音频数据
   is_final: boolean
   timestamp: number
 }
@@ -159,22 +159,15 @@ export class SpeechRecognitionService {
     }
 
     try {
-      // 将ArrayBuffer转换为base64
-      const audioBase64 = btoa(
-        new Uint8Array(audioData).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ''
-        )
-      )
-
       const audioChunk: AudioChunkData = {
         session_id: this.sessionId,
-        audio_data: audioBase64,
+        audio_data: audioData,
         is_final: isFinal,
         timestamp: Date.now()
       }
 
-      this.websocket.send(JSON.stringify(audioChunk))
+      // 发送二进制数据
+      this.websocket.send(audioData)
       return true
     } catch (error) {
       console.error('发送音频数据失败:', error)
