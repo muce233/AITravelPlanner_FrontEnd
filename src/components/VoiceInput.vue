@@ -122,7 +122,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Microphone } from '@element-plus/icons-vue'
-import { speechService, ASRModelType, type RealtimeTranscriptionResponse } from '@/services/speechService'
+import { speechService, type RealtimeTranscriptionResponse } from '@/services/speechService'
 
 // 响应式数据
 const isMobile = ref(false)
@@ -203,12 +203,9 @@ const useDefaultConfig = () => {
 
 // 处理转录结果
 const handleTranscription = (response: RealtimeTranscriptionResponse) => {
-  if (response.text && response.is_final) {
-    // 发送最终识别结果
+  if (response.text) {
+    // 发送识别结果
     emit('transcription', response.text)
-  } else if (response.text) {
-    // 实时转录结果
-    emit('interim-transcription', response.text)
   }
 }
 
@@ -402,9 +399,6 @@ const stopRecording = () => {
     clearInterval(timer.value)
     timer.value = null
   }
-
-  // 发送结束标记
-  speechService.sendAudioData(new ArrayBuffer(0), true)
 
   // 断开连接
   speechService.disconnectRealtime()

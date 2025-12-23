@@ -3,11 +3,6 @@
  */
 import { apiClient } from '@/utils/axios'
 
-// 语音识别模型类型
-export enum ASRModelType {
-  FUN_ASR_REALTIME = 'fun-asr-realtime',
-  QWEN_ASR_REALTIME = 'qwen-asr-realtime'
-}
 
 // 音频格式
 export enum AudioFormat {
@@ -51,8 +46,6 @@ export interface SpeechRecognitionRequest {
 export interface SpeechRecognitionResponse {
   text: string
   confidence?: number
-  is_final: boolean
-  model_type: ASRModelType
   language: LanguageCode
 }
 
@@ -62,7 +55,6 @@ export interface SpeechRecognitionResponse {
 export interface AudioChunkData {
   session_id: string
   audio_data: ArrayBuffer  // 二进制音频数据
-  is_final: boolean
   timestamp: number
 }
 
@@ -70,9 +62,7 @@ export interface AudioChunkData {
 export interface RealtimeTranscriptionResponse {
   session_id: string
   text: string
-  is_final: boolean
   confidence?: number
-  model_type: ASRModelType
 }
 
 /**
@@ -153,20 +143,13 @@ export class SpeechRecognitionService {
   /**
    * 发送音频数据到实时识别会话
    */
-  sendAudioData(audioData: ArrayBuffer, isFinal: boolean = false): boolean {
+  sendAudioData(audioData: ArrayBuffer): boolean {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
       return false
     }
 
     try {
-      const audioChunk: AudioChunkData = {
-        session_id: this.sessionId,
-        audio_data: audioData,
-        is_final: isFinal,
-        timestamp: Date.now()
-      }
-
-      // 发送二进制数据
+      // 发送二进制音频数据
       this.websocket.send(audioData)
       return true
     } catch (error) {
