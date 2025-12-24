@@ -183,23 +183,6 @@ export class SpeechRecognitionService {
   getCurrentSessionId(): string {
     return this.sessionId
   }
-
-  /**
-   * 获取服务状态
-   */
-  async getServiceStatus(): Promise<{
-    active_sessions: number
-    expired_sessions_cleaned: number
-    service_status: string
-  }> {
-    try {
-      const response = await apiClient.get('/api/speech/status')
-      return response.data
-    } catch (error) {
-      console.error('获取服务状态失败:', error)
-      throw new Error('获取服务状态失败')
-    }
-  }
 }
 
 // 创建全局语音识别服务实例
