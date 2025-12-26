@@ -354,6 +354,8 @@ const stopRecording = () => {
   cleanupAudioResources()
 
   emit('recording-stopped')
+  // 触发发送输入事件
+  emit('send-input')
 }
 
 // 清理音频录制资源
@@ -420,6 +422,7 @@ const emit = defineEmits<{
   'recording-stopped': []
   'transcription': [text: string]
   'interim-transcription': [text: string]
+  'send-input': []
 }>()
 
 // 生命周期

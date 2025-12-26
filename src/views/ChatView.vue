@@ -125,6 +125,7 @@
             @interim-transcription="handleInterimTranscription"
             @recording-started="handleRecordingStarted"
             @recording-stopped="handleRecordingStopped"
+            @send-input="handleSendMessage"
           />
         </div>
 
@@ -322,8 +323,7 @@ const handleDeleteConversation = async (conversationId: string) => {
 // 语音转录处理
 const handleVoiceTranscription = (text: string) => {
   inputMessage.value = text
-  // 自动发送消息
-  handleSendMessage()
+  // 只填充文本到输入框，不自动发送，让用户手动确认
 }
 
 // 实时转录处理
