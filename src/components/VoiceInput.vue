@@ -142,6 +142,8 @@ const timer = ref<number | null>(null)
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const audioContext = ref<AudioContext | null>(null)
 const audioStream = ref<MediaStream | null>(null)
+const scriptProcessor = ref<ScriptProcessorNode | null>(null)
+const sourceNode = ref<MediaStreamAudioSourceNode | null>(null)
 
 // 配置
 const config = ref({
@@ -233,18 +235,26 @@ const initAudioRecording = async (): Promise<boolean> => {
       sampleRate: config.value.sampleRate
     })
 
-    // 创建MediaRecorder
-    const options = {
-      mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 16000
-    }
+    // 创建源节点
+    sourceNode.value = audioContext.value.createMediaStreamSource(audioStream.value)
 
-    mediaRecorder.value = new MediaRecorder(audioStream.value, options)
+    // 创建脚本处理器节点（实时处理音频）
+    const bufferSize = 4096
+    scriptProcessor.value = audioContext.value.createScriptProcessor(bufferSize, 1, 1)
 
-    // 设置数据可用时的处理
-    mediaRecorder.value.ondataavailable = async (event) => {
-      if (event.data.size > 0) {
-        await processAudioData(event.data)
+    // 连接节点
+    sourceNode.value.connect(scriptProcessor.value)
+    scriptProcessor.value.connect(audioContext.value.destination)
+
+    // 设置音频处理回调
+    scriptProcessor.value.onaudioprocess = (event) => {
+      if (isRecording.value) {
+        const inputData = event.inputBuffer.getChannelData(0)
+        const pcmData = float32ToPCM16(inputData)
+        const success = speechService.sendAudioData(pcmData)
+        if (!success) {
+          console.error('发送音频数据失败')
+        }
       }
     }
 
@@ -254,59 +264,6 @@ const initAudioRecording = async (): Promise<boolean> => {
     error.value = '初始化音频录制失败'
     return false
   }
-}
-
-// 处理音频数据
-const processAudioData = async (audioBlob: Blob) => {
-  try {
-    // 将Blob转换为ArrayBuffer
-    const arrayBuffer = await audioBlob.arrayBuffer()
-
-    // 解码音频数据
-    const audioBuffer = await audioContext.value!.decodeAudioData(arrayBuffer)
-
-    // 转换为PCM格式
-    const pcmData = convertToPCM(audioBuffer)
-
-    // 发送到语音识别服务
-    const success = speechService.sendAudioData(pcmData)
-    if (!success) {
-      console.error('发送音频数据失败')
-    }
-  } catch (err) {
-    console.error('处理音频数据失败:', err)
-  }
-}
-
-// 转换为PCM格式
-const convertToPCM = (audioBuffer: AudioBuffer): ArrayBuffer => {
-  const length = audioBuffer.length
-  const sampleRate = audioBuffer.sampleRate
-
-  // 如果采样率不匹配，需要重采样
-  if (sampleRate !== config.value.sampleRate) {
-    // 简单的线性重采样（实际项目中应该使用更复杂的重采样算法）
-    const resampledLength = Math.floor(length * config.value.sampleRate / sampleRate)
-    const resampledData = new Float32Array(resampledLength)
-
-    for (let i = 0; i < resampledLength; i++) {
-      const originalIndex = i * sampleRate / config.value.sampleRate
-      const index1 = Math.floor(originalIndex)
-      const index2 = Math.min(index1 + 1, length - 1)
-      const fraction = originalIndex - index1
-
-      const channelData = audioBuffer.getChannelData(0)
-      const value1 = channelData[index1] || 0
-      const value2 = channelData[index2] || 0
-
-      resampledData[i] = value1 * (1 - fraction) + value2 * fraction
-    }
-
-    return float32ToPCM16(resampledData)
-  }
-
-  // 直接转换
-  return float32ToPCM16(audioBuffer.getChannelData(0))
 }
 
 // Float32转换为PCM16
@@ -355,11 +312,6 @@ const startRecording = async () => {
     isRecording.value = true
     recordingTime.value = 0
 
-    // 开始MediaRecorder录制
-    if (mediaRecorder.value) {
-      mediaRecorder.value.start(100) // 每100ms触发一次dataavailable事件
-    }
-
     // 启动计时器
     timer.value = setInterval(() => {
       recordingTime.value++
@@ -389,11 +341,6 @@ const stopRecording = () => {
 
   isRecording.value = false
 
-  // 停止MediaRecorder录制
-  if (mediaRecorder.value && mediaRecorder.value.state === 'recording') {
-    mediaRecorder.value.stop()
-  }
-
   // 停止计时器
   if (timer.value) {
     clearInterval(timer.value)
@@ -411,6 +358,18 @@ const stopRecording = () => {
 
 // 清理音频录制资源
 const cleanupAudioResources = () => {
+  // 断开脚本处理器连接
+  if (scriptProcessor.value) {
+    scriptProcessor.value.disconnect()
+    scriptProcessor.value = null
+  }
+
+  // 断开源节点连接
+  if (sourceNode.value) {
+    sourceNode.value.disconnect()
+    sourceNode.value = null
+  }
+
   // 关闭音频上下文
   if (audioContext.value) {
     audioContext.value.close()
