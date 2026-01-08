@@ -1,8 +1,10 @@
 import { apiClient, streamClient } from '../utils/axios'
 
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system'
+  id: string
+  role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
+  message_type?: 'normal' | 'tool_call_status' | 'tool_result'
   name?: string
 }
 
@@ -25,21 +27,6 @@ export interface ChatResponse {
     completion_tokens: number
     total_tokens: number
   }
-}
-
-export interface ChatChunk {
-  id: string
-  object: 'chat.completion.chunk'
-  created: number
-  model: string
-  choices: Array<{
-    index: number
-    delta: {
-      content?: string
-      role?: string
-    }
-    finish_reason: string | null
-  }>
 }
 
 export interface ApiStatus {
@@ -88,6 +75,34 @@ export interface ConversationsResponse {
   page_size: number
 }
 
+// 工具调用事件接口
+export interface MessageCreateEvent {
+  type: 'message_create'
+  message_id: string
+  created_at: string
+}
+
+export interface MessageChunkEvent {
+  type: 'message_chunk'
+  message_id: string
+  index: number
+  content: string
+}
+
+export interface ToolCallEvent {
+  type: 'tool_call'
+  status: 'calling'
+  content: string
+}
+
+export interface ToolResultEvent {
+  type: 'tool_result'
+  status: 'success' | 'failed'
+  content: string
+}
+
+export type StreamEvent = MessageCreateEvent | MessageChunkEvent | ToolCallEvent | ToolResultEvent
+
 class ChatService {
   private baseURL = '/chat'
 
@@ -95,15 +110,15 @@ class ChatService {
 
   async sendMessageStream(
     request: ChatRequest,
-    onChunk: (chunk: ChatChunk) => void,
+    onEvent: (event: StreamEvent) => void,
     onComplete: () => void,
     onError: (error: Error) => void,
   ) {
     // 使用统一的流式客户端
-    await streamClient.post<ChatChunk>(
+    await streamClient.post<StreamEvent>(
       '/chat/completions/stream',
       request,
-      onChunk,
+      onEvent,
       onComplete,
       onError
     )

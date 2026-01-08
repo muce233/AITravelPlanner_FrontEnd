@@ -9,6 +9,13 @@ export const useChatStore = defineStore('chat', () => {
   const error = ref<string | null>(null)
   const currentStreamContent = ref('')
 
+  // 当前正在处理的AI消息ID
+  const currentMessageId = ref<string | null>(null)
+  // 当前正在处理的工具调用消息ID
+  const currentToolCallMessageId = ref<string | null>(null)
+  // 工具调用状态映射：messageId -> toolCallStatus
+  const toolCallStatusMap = ref<{ [messageId: string]: { [key: string]: { status: 'calling' | 'success' | 'failed', content: string } } }>({})
+
   // 对话管理相关状态
   const conversations = ref<ConversationBasicInfo[]>([])
   const currentConversation = ref<Conversation | null>(null)
@@ -16,6 +23,27 @@ export const useChatStore = defineStore('chat', () => {
 
   const addMessage = (message: ChatMessage) => {
     messages.value.push(message)
+  }
+
+  // 合并消息：将相同message_id的消息合并
+  const mergeMessage = (messageId: string, content: string) => {
+    const message = messages.value.find(m => m.id === messageId)
+    if (message) {
+      message.content = content
+    }
+  }
+
+  // 添加或更新工具调用状态
+  const updateToolCallStatus = (messageId: string, toolName: string, status: 'calling' | 'success' | 'failed', content: string) => {
+    if (!toolCallStatusMap.value[messageId]) {
+      toolCallStatusMap.value[messageId] = {}
+    }
+    toolCallStatusMap.value[messageId][toolName] = { status, content }
+  }
+
+  // 获取指定消息的工具调用状态
+  const getToolCallStatus = (messageId: string) => {
+    return toolCallStatusMap.value[messageId] || {}
   }
 
   const clearMessages = () => {
@@ -28,6 +56,49 @@ export const useChatStore = defineStore('chat', () => {
   const setCurrentConversation = (conversation: Conversation) => {
     currentConversation.value = conversation
     messages.value = conversation.messages || []
+
+    // 初始化工具调用状态映射
+    initializeToolCallStatusMap(messages.value)
+  }
+
+  // 初始化工具调用状态映射（用于历史消息）
+  const initializeToolCallStatusMap = (messages: ChatMessage[]) => {
+    // 清空现有的状态映射
+    toolCallStatusMap.value = {}
+
+    // 遍历消息，提取工具调用信息
+    for (const message of messages) {
+      if (message.message_type === 'tool_call_status') {
+        try {
+          // 解析工具调用消息的 content（JSON 格式）
+          const contentData = JSON.parse(message.content)
+          if (contentData.tool_calls && Array.isArray(contentData.tool_calls)) {
+            for (const toolCall of contentData.tool_calls) {
+              if (toolCall.function && toolCall.function.name) {
+                const toolName = toolCall.function.name
+                // 历史消息中的工具调用状态默认为 success
+                updateToolCallStatus(message.id, toolName, 'success', `正在调用工具: ${toolName}`)
+              }
+            }
+          }
+        } catch (e) {
+          console.error('解析工具调用消息失败:', e)
+        }
+      } else if (message.message_type === 'tool_result') {
+        try {
+          // 解析工具结果消息的 content（JSON 格式）
+          const contentData = JSON.parse(message.content)
+          if (contentData.tool_name) {
+            const toolName = contentData.tool_name
+            const status = contentData.success ? 'success' : 'failed'
+            const statusText = contentData.success ? `工具 ${toolName} 调用完成` : `工具 ${toolName} 调用失败`
+            updateToolCallStatus(message.id, toolName, status, statusText)
+          }
+        } catch (e) {
+          console.error('解析工具结果消息失败:', e)
+        }
+      }
+    }
   }
 
   // 获取对话列表（只包含基本信息）
@@ -147,6 +218,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
       role: 'user',
       content: content.trim()
     }
@@ -165,13 +237,6 @@ export const useChatStore = defineStore('chat', () => {
     isStreaming.value = true
     currentStreamContent.value = ''
 
-    const assistantMessage: ChatMessage = {
-      role: 'assistant',
-      content: ''
-    }
-
-    addMessage(assistantMessage)
-
     const request: ChatRequest = {
       messages: requestMessages
     }
@@ -179,19 +244,71 @@ export const useChatStore = defineStore('chat', () => {
     try {
       await chatService.sendMessageStream(
         request,
-        (chunk) => {
-                if (chunk.choices[0]?.delta?.content) {
-                  currentStreamContent.value += chunk.choices[0].delta.content
-                  const lastMessage = messages.value[messages.value.length - 1]
-                  if (lastMessage) {
-                    lastMessage.content = currentStreamContent.value
-                  }
-                }
-              },
+        (event) => {
+          // 处理message_create事件
+          if (event.type === 'message_create') {
+            currentMessageId.value = event.message_id
+            const assistantMessage: ChatMessage = {
+              id: event.message_id,
+              role: 'assistant',
+              content: '',
+              message_type: 'normal'
+            }
+            addMessage(assistantMessage)
+            currentStreamContent.value = ''
+          }
+          // 处理message_chunk事件
+          else if (event.type === 'message_chunk') {
+            if (currentMessageId.value) {
+              currentStreamContent.value += event.content
+              mergeMessage(currentMessageId.value, currentStreamContent.value)
+            }
+          }
+          // 处理tool_call事件
+          else if (event.type === 'tool_call') {
+            const toolName = event.content.replace('正在调用工具: ', '')
+            const toolCallMessageId = crypto.randomUUID()
+            currentToolCallMessageId.value = toolCallMessageId
+
+            // 创建工具调用状态消息
+            const toolCallMessage: ChatMessage = {
+              id: toolCallMessageId,
+              role: 'assistant',
+              content: event.content,
+              message_type: 'tool_call_status'
+            }
+            addMessage(toolCallMessage)
+
+            // 更新工具调用状态
+            updateToolCallStatus(toolCallMessageId, toolName, 'calling', event.content)
+          }
+          // 处理tool_result事件
+          else if (event.type === 'tool_result') {
+            const toolName = event.content.replace('工具 ', '').replace(' 调用完成', '')
+            const toolResultMessageId = crypto.randomUUID()
+
+            // 创建工具结果消息
+            const toolResultMessage: ChatMessage = {
+              id: toolResultMessageId,
+              role: 'tool',
+              content: event.content,
+              message_type: 'tool_result'
+            }
+            addMessage(toolResultMessage)
+
+            // 更新工具调用状态：同时更新tool_call消息和tool_result消息的状态
+            if (currentToolCallMessageId.value) {
+              updateToolCallStatus(currentToolCallMessageId.value, toolName, event.status, event.content)
+            }
+            // 也为tool_result消息创建状态映射，以便显示
+            updateToolCallStatus(toolResultMessageId, toolName, event.status, event.content)
+          }
+        },
         () => {
           isStreaming.value = false
           isLoading.value = false
           currentStreamContent.value = ''
+          currentMessageId.value = null
 
           // 流式响应后 本地更新当前对话的排序
           if (currentConversation.value) {
@@ -203,6 +320,7 @@ export const useChatStore = defineStore('chat', () => {
           isLoading.value = false
           isStreaming.value = false
           currentStreamContent.value = ''
+          currentMessageId.value = null
           // 移除空的助手消息
           if (messages.value[messages.value.length - 1]?.content === '') {
             messages.value.pop()
@@ -214,6 +332,7 @@ export const useChatStore = defineStore('chat', () => {
       isLoading.value = false
       isStreaming.value = false
       currentStreamContent.value = ''
+      currentMessageId.value = null
       // 移除空的助手消息
       if (messages.value[messages.value.length - 1]?.content === '') {
         messages.value.pop()
@@ -230,9 +349,15 @@ export const useChatStore = defineStore('chat', () => {
     conversations,
     currentConversation,
     isConversationLoading,
+    currentMessageId,
+    toolCallStatusMap,
     addMessage,
     clearMessages,
+    mergeMessage,
+    updateToolCallStatus,
+    getToolCallStatus,
     setCurrentConversation,
+    initializeToolCallStatusMap,
     getConversations,
     createConversation,
     getConversation,

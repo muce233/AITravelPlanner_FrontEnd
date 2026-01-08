@@ -57,47 +57,90 @@
 
         <div v-else class="messages-list">
           <div
-            v-for="(message, index) in messages"
-            :key="index"
-            :class="['message-item', message.role]"
+            v-for="(group, groupIndex) in mergedMessages"
+            :key="groupIndex"
+            :class="['message-item', group.role]"
           >
             <!-- 用户消息 -->
-            <div v-if="message.role === 'user'" class="message user-message">
-              <div class="message-avatar">
+            <div v-if="group.role === 'user'" class="message user-message">
+              <div v-if="shouldShowAvatar(groupIndex, 'user')" class="message-avatar">
                 <el-avatar :size="32" :src="userStore.user?.avatar" />
               </div>
               <div class="message-content">
                 <div class="message-bubble">
-                  {{ message.content }}
+                  {{ group.messages[0]?.content }}
                 </div>
                 <div class="message-time">
-                  {{ formatMessageTime(index) }}
+                  {{ formatMessageTime() }}
                 </div>
               </div>
             </div>
 
-            <!-- AI助手消息 -->
+            <!-- AI助手消息（可能包含多条合并的消息） -->
             <div v-else class="message assistant-message">
-              <div class="message-avatar">
+              <div v-if="shouldShowAvatar(groupIndex, 'assistant')" class="message-avatar">
                 <el-avatar :size="32" class="ai-avatar">
                   <el-icon><ChatDotRound /></el-icon>
                 </el-avatar>
               </div>
               <div class="message-content">
                 <div class="message-bubble">
-                  <div
-                    v-if="isStreaming && index === messages.length - 1"
-                    class="streaming-content"
-                  >
-                    {{ message.content }}
-                    <span class="typing-indicator"></span>
-                  </div>
-                  <div v-else>
-                    {{ message.content }}
-                  </div>
+                  <template v-for="(msg, msgIndex) in group.messages" :key="msg.id">
+                    <!-- 普通文本消息 -->
+                    <div
+                      v-if="msg.message_type === 'normal' || !msg.message_type"
+                      class="message-text-block"
+                    >
+                      <div
+                        v-if="isStreaming && msg.id === chatStore.currentMessageId"
+                        class="streaming-content"
+                      >
+                        {{ msg.content }}
+                        <span class="typing-indicator"></span>
+                      </div>
+                      <div v-else>
+                        {{ msg.content }}
+                      </div>
+                    </div>
+
+                    <!-- 工具调用状态消息 -->
+                    <div
+                      v-else-if="msg.message_type === 'tool_call_status' && shouldShowToolCallStatus(msg.id)"
+                      class="tool-call-status"
+                    >
+                      <div
+                        v-for="(status, toolName) in getMessageToolCallStatus(msg.id)"
+                        :key="toolName"
+                        :class="['tool-call-item', status.status]"
+                      >
+                        <el-icon v-if="status.status === 'calling'" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else-if="status.status === 'success'"><CircleCheck /></el-icon>
+                        <el-icon v-else><CircleClose /></el-icon>
+                        <span>{{ status.content }}</span>
+                      </div>
+                    </div>
+
+                    <!-- 工具结果消息 -->
+                    <div
+                      v-else-if="msg.message_type === 'tool_result'"
+                      class="tool-result-block"
+                    >
+                      <div
+                        v-for="(status, toolName) in getMessageToolCallStatus(msg.id)"
+                        :key="toolName"
+                        :class="['tool-call-item', status.status]"
+                      >
+                        <el-icon v-if="status.status === 'calling'" class="is-loading"><Loading /></el-icon>
+                        <el-icon v-else-if="status.status === 'success'"><CircleCheck /></el-icon>
+                        <el-icon v-else><CircleClose /></el-icon>
+                        <span>{{ status.content }}</span>
+                      </div>
+                    </div>
+                  </template>
                 </div>
+
                 <div class="message-time">
-                  {{ formatMessageTime(index) }}
+                  {{ formatMessageTime() }}
                 </div>
               </div>
             </div>
@@ -173,7 +216,9 @@ import {
   Loading,
   More,
   Plus,
-  Close
+  Close,
+  CircleCheck,
+  CircleClose
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -192,7 +237,7 @@ const messagesContainer = ref<HTMLDivElement>()
   const isMobile = ref(false)
 
   // 监听窗口大小变化
-  const checkMobile = () => {
+  const handleResize = () => {
     isMobile.value = window.innerWidth <= 768
   }
 
@@ -211,7 +256,7 @@ const messagesContainer = ref<HTMLDivElement>()
   }
 
   // 获取预览文本
-  const getPreviewText = (conversation: any): string => {
+  const getPreviewText = (conversation: { latest_message_preview?: string; title: string }): string => {
     // 优先使用最新消息预览，如果没有则使用对话标题
     if (conversation.latest_message_preview) {
       return conversation.latest_message_preview
@@ -253,8 +298,62 @@ const messagesContainer = ref<HTMLDivElement>()
   const error = computed(() => chatStore.error)
   const conversations = computed(() => chatStore.conversations)
 
+  // 合并消息：将连续的assistant和tool消息合并到同一个气泡中
+  const mergedMessages = computed(() => {
+    const result: Array<{
+      role: 'user' | 'assistant'
+      messages: typeof messages.value
+    }> = []
+
+    for (let i = 0; i < messages.value.length; i++) {
+      const currentMessage = messages.value[i]
+
+      if (currentMessage.role === 'user') {
+        result.push({
+          role: 'user',
+          messages: [currentMessage]
+        })
+      } else {
+        // assistant或tool消息
+        const lastGroup = result[result.length - 1]
+
+        if (lastGroup && lastGroup.role === 'assistant') {
+          // 检查是否应该合并：当前消息是assistant或tool，且与上一条消息属于同一组
+          lastGroup.messages.push(currentMessage)
+        } else {
+          // 创建新的assistant组
+          result.push({
+            role: 'assistant',
+            messages: [currentMessage]
+          })
+        }
+      }
+    }
+
+    return result
+  })
+
+  // 判断是否应该显示头像（用于消息气泡合并）
+  const shouldShowAvatar = (index: number, role: 'user' | 'assistant') => {
+    if (index === 0) return true
+    const prevGroup = mergedMessages.value[index - 1]
+    if (!prevGroup) return true
+    return prevGroup.role !== role
+  }
+
+  // 获取指定消息的工具调用状态
+  const getMessageToolCallStatus = (messageId: string) => {
+    return chatStore.getToolCallStatus(messageId)
+  }
+
+  // 判断是否应该显示工具调用状态消息（只有当有工具正在调用时才显示）
+  const shouldShowToolCallStatus = (messageId: string) => {
+    const statusMap = chatStore.getToolCallStatus(messageId)
+    return Object.values(statusMap).some(status => status.status === 'calling')
+  }
+
   // 格式化消息时间
-  const formatMessageTime = (index: number) => {
+  const formatMessageTime = () => {
     const now = new Date()
     return now.toLocaleTimeString('zh-CN', {
       hour: '2-digit',
@@ -274,7 +373,7 @@ const handleCreateConversation = async () => {
     }
 
     ElMessage.success('对话创建成功')
-  } catch (error) {
+  } catch {
     ElMessage.error('创建对话失败')
   }
 }
@@ -291,7 +390,7 @@ const handleSelectConversation = async (conversationId: string) => {
     }
 
     inputRef.value?.focus()
-  } catch (error) {
+  } catch {
     ElMessage.error('加载对话失败')
   }
 }
@@ -314,6 +413,7 @@ const handleDeleteConversation = async (conversationId: string) => {
 
     ElMessage.success('对话删除成功')
   } catch (error) {
+    // 用户点击取消时不显示错误
     if (error !== 'cancel') {
       ElMessage.error('删除对话失败')
     }
@@ -387,11 +487,6 @@ watch(isStreaming, (newVal) => {
     }, 100)
   }
 })
-
-// 窗口大小变化监听
-const handleResize = () => {
-  isMobile.value = window.innerWidth <= 768
-}
 
 // 初始化
 onMounted(() => {
@@ -600,7 +695,7 @@ onUnmounted(() => {
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 8px;
 }
 
 .message-item {
@@ -676,6 +771,69 @@ onUnmounted(() => {
 .ai-avatar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+}
+
+/* 消息内容块样式 */
+.message-text-block {
+  margin-bottom: 8px;
+}
+
+.message-text-block:last-child {
+  margin-bottom: 0;
+}
+
+/* 工具调用状态样式 */
+.tool-call-status {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-call-status:last-child {
+  margin-bottom: 0;
+}
+
+.tool-result-block {
+  margin-bottom: 8px;
+}
+
+.tool-result-block:last-child {
+  margin-bottom: 0;
+}
+
+.tool-call-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #f8f9fa;
+  border-left: 3px solid;
+}
+
+.tool-call-item.calling {
+  background: #e3f2fd;
+  border-left-color: #2196f3;
+  color: #1976d2;
+}
+
+.tool-call-item.success {
+  background: #e8f5e9;
+  border-left-color: #4caf50;
+  color: #2e7d32;
+}
+
+.tool-call-item.failed {
+  background: #ffebee;
+  border-left-color: #f44336;
+  color: #c62828;
+}
+
+.tool-call-item .el-icon {
+  font-size: 14px;
 }
 
 .loading-indicator {
