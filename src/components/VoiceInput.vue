@@ -1,12 +1,12 @@
 <template>
   <div class="voice-input-container">
     <!-- PC端模式 -->
-    <div v-if="!isMobile" class="pc-mode">
+    <div v-if="!isMobile" class="pc-mode" :class="{ 'horizontal': horizontal }">
       <el-tooltip :content="isRecording ? '停止录音' : '开始录音'" placement="top">
         <el-button
           :type="isRecording ? 'danger' : 'primary'"
           circle
-          size="large"
+          :size="horizontal ? 'default' : 'large'"
           @click="toggleRecording"
           :loading="isConnecting"
           :disabled="!hasMicrophonePermission"
@@ -17,7 +17,7 @@
       </el-tooltip>
 
       <!-- 录音状态显示 -->
-      <div v-if="isRecording" class="recording-status">
+      <div v-if="isRecording && !horizontal" class="recording-status">
         <div class="recording-indicator">
           <span class="pulse"></span>
           <span class="text">录音中...</span>
@@ -425,6 +425,15 @@ const emit = defineEmits<{
   'send-input': []
 }>()
 
+// Props
+interface Props {
+  horizontal?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  horizontal: false
+})
+
 // 生命周期
 onMounted(() => {
   checkDeviceType()
@@ -460,9 +469,20 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.pc-mode.horizontal {
+  flex-direction: row;
+  gap: 8px;
+}
+
 .recording-status {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-mode.horizontal .recording-status {
+  flex-direction: row;
   align-items: center;
   gap: 8px;
 }

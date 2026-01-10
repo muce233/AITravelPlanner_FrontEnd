@@ -84,7 +84,7 @@ const handleLogin = async () => {
     await userStore.login(loginForm.value.username, loginForm.value.password)
 
     ElMessage.success('登录成功')
-    router.push('/chat')
+    router.push('/')
   } catch (error: any) {
     if (error.response) {
       ElMessage.error(error.response.data.detail || '登录失败')
