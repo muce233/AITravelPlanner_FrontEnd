@@ -52,6 +52,12 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
   }
 
+  // 设置消息列表
+  const setMessages = (newMessages: ChatMessage[]) => {
+    messages.value = newMessages
+    initializeToolCallStatusMap(newMessages)
+  }
+
   // 设置当前对话
   const setCurrentConversation = (conversation: Conversation) => {
     currentConversation.value = conversation
@@ -150,6 +156,17 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // 直接获取对话的消息列表（从conversation_messages表）
+  const getConversationMessages = async (conversationId: string): Promise<ChatMessage[]> => {
+    try {
+      const messages = await chatService.getConversationMessages(conversationId)
+      return messages
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '获取对话消息失败'
+      throw err
+    }
+  }
+
   // 删除对话
   const deleteConversation = async (conversationId: string): Promise<void> => {
     try {
@@ -205,17 +222,6 @@ export const useChatStore = defineStore('chat', () => {
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return
-
-    // 如果没有当前对话，自动创建一个新对话
-    if (!currentConversation.value) {
-      try {
-        const newConversation = await createConversation('新对话')
-        setCurrentConversation(newConversation)
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : '创建对话失败'
-        return
-      }
-    }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -353,6 +359,7 @@ export const useChatStore = defineStore('chat', () => {
     toolCallStatusMap,
     addMessage,
     clearMessages,
+    setMessages,
     mergeMessage,
     updateToolCallStatus,
     getToolCallStatus,
@@ -361,6 +368,7 @@ export const useChatStore = defineStore('chat', () => {
     getConversations,
     createConversation,
     getConversation,
+    getConversationMessages,
     deleteConversation,
     sendMessage,
     updateConversationOrder

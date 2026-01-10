@@ -140,6 +140,11 @@ class ChatService {
     return response.data
   }
 
+  async getConversationMessages(conversationId: string): Promise<ChatMessage[]> {
+    const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`)
+    return response.data
+  }
+
   async deleteConversation(conversationId: string): Promise<void> {
     await apiClient.delete(`/chat/conversations/${conversationId}`)
   }

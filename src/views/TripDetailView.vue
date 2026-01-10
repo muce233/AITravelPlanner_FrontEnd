@@ -724,6 +724,15 @@ const fetchData = async () => {
 
   await tripStore.fetchTripById(tripId.value)
   await tripStore.fetchTripDetails(tripId.value)
+
+  if (currentTrip.value?.conversation_id) {
+    try {
+      const messages = await chatStore.getConversationMessages(currentTrip.value.conversation_id)
+      chatStore.setMessages(messages)
+    } catch (error) {
+      console.error('加载对话历史失败:', error)
+    }
+  }
 }
 
 watch(tripId, () => {

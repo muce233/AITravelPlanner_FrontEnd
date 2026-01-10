@@ -11,6 +11,7 @@ export interface Trip {
   end_date: string | null
   total_budget: number
   actual_expense: number
+  conversation_id: string
   created_at: string
   updated_at: string | null
 }
@@ -149,7 +150,7 @@ export const useTripStore = defineStore('trip', () => {
   // 行程详情相关操作
   async function fetchTripDetails(tripId: string) {
     try {
-      const response = await apiClient.get(`/trips/${tripId}/details`)
+      const response = await apiClient.get(`/trips/${tripId}/details/`)
       tripDetails.value = response.data
       return response
     } catch (error) {
