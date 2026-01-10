@@ -1,96 +1,90 @@
 <template>
   <div class="home-container">
-    <h1>AI旅行规划师</h1>
-    <p>智能生成个性化旅行计划，轻松管理旅行预算</p>
-    <!-- 地图显示区域 -->
-    <div class="map-section">
-      <h2>地图视图</h2>
-      <div class="map-placeholder">地图将在这里显示</div>
-    </div>
-
-    <!-- 快速创建行程入口 -->
-    <div class="quick-create-section">
-      <el-button type="primary" size="large" @click="$router.push('/trips/create')">
+    <div class="header-section">
+      <h1>我的行程</h1>
+      <el-button type="primary" @click="handleCreateTrip" :loading="creating">
         <el-icon><Plus /></el-icon>
-        快速创建行程
-      </el-button>
-      <el-button type="success" size="large" @click="$router.push('/chat')">
-        <el-icon><ChatDotRound /></el-icon>
-        开始聊天
+        创建行程
       </el-button>
     </div>
 
-    <!-- 历史行程列表 -->
-    <div class="trips-section">
-      <h2>历史行程</h2>
-      <el-empty v-if="trips.length === 0" description="暂无行程" />
-      <el-card v-else :body-style="{ padding: '0px' }">
-        <el-timeline>
-          <el-timeline-item
-            v-for="trip in trips"
-            :key="trip.id"
-            :timestamp="formatDate(trip.start_date)"
-            placement="top"
-          >
-            <el-card>
-              <h3>{{ trip.title }}</h3>
-              <p>{{ trip.destination }} | {{ formatDateRange(trip.start_date, trip.end_date) }}</p>
-              <p>预算: {{ trip.total_budget }} 元 | 已支出: {{ trip.actual_expense }} 元</p>
-              <el-button-group>
-                <el-button type="primary" @click="$router.push(`/trips/${trip.id}`)">
-                  查看详情
-                </el-button>
-                <el-button @click="$router.push(`/trips/${trip.id}/budget`)"> 预算管理 </el-button>
-              </el-button-group>
-            </el-card>
-          </el-timeline-item>
-        </el-timeline>
+    <el-empty v-if="trips.length === 0" description="暂无行程，点击上方按钮创建新行程" />
+    <div v-else class="trips-list">
+      <el-card
+        v-for="trip in trips"
+        :key="trip.id"
+        class="trip-card"
+        shadow="hover"
+      >
+        <div class="trip-card-content">
+          <div class="trip-info">
+            <h3>{{ trip.title || '未命名行程' }}</h3>
+            <p class="trip-destination">
+              <el-icon><Location /></el-icon>
+              {{ trip.destination || '未设置目的地' }}
+            </p>
+            <p class="trip-date">
+              <el-icon><Calendar /></el-icon>
+              {{ formatDateRange(trip.start_date, trip.end_date) }}
+            </p>
+            <p class="trip-budget">
+              <el-icon><Wallet /></el-icon>
+              预算: {{ trip.total_budget }} 元 | 已支出: {{ trip.actual_expense }} 元
+            </p>
+          </div>
+          <div class="trip-actions">
+            <el-button type="primary" @click="$router.push(`/trips/${trip.id}`)">
+              查看详情
+            </el-button>
+          </div>
+        </div>
       </el-card>
-    </div>
-
-    <!-- 语音输入按钮 -->
-    <div class="voice-input-section">
-      <el-button circle type="success" size="large">
-        <el-icon><Microphone /></el-icon>
-      </el-button>
-      <p>语音创建行程</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, Microphone, ChatDotRound } from '@element-plus/icons-vue'
+import { Plus, Location, Calendar, Wallet } from '@element-plus/icons-vue'
 import { useTripStore } from '../stores/trip'
 import { useUserStore } from '../stores/user'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const tripStore = useTripStore()
 const userStore = useUserStore()
 const trips = ref<any[]>([])
+const creating = ref(false)
 
-// 格式化日期
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString()
-}
-
-// 格式化日期范围
 const formatDateRange = (startDate: string, endDate: string) => {
+  if (!startDate || !endDate) {
+    return '日期未设置'
+  }
   const start = new Date(startDate)
   const end = new Date(endDate)
   return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
 }
 
-// 初始化数据
+const handleCreateTrip = async () => {
+  try {
+    creating.value = true
+    const newTrip = await tripStore.createQuickTrip()
+    ElMessage.success('行程创建成功')
+    router.push(`/trips/${newTrip.id}`)
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.detail || '行程创建失败')
+  } finally {
+    creating.value = false
+  }
+}
+
 onMounted(async () => {
-  // 检查用户是否已登录
   await userStore.initialize()
   if (userStore.isAuthenticated) {
-    // 获取用户行程
     await tripStore.fetchTrips()
     trips.value = tripStore.sortedTrips
   } else {
-    // 跳转到登录页面
     window.location.href = '/login'
   }
 })
@@ -103,38 +97,54 @@ onMounted(async () => {
   padding: 20px;
 }
 
-.map-section {
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 30px;
 }
 
-.map-placeholder {
-  width: 100%;
-  height: 400px;
-  background-color: #f0f2f5;
-  border-radius: 8px;
+.header-section h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #303133;
+}
+
+.trips-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.trip-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.trip-card:hover {
+  transform: translateY(-4px);
+}
+
+.trip-card-content {
+  padding: 20px;
+}
+
+.trip-info h3 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  color: #303133;
+}
+
+.trip-info p {
+  margin: 10px 0;
+  color: #606266;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #909399;
-  font-size: 18px;
+  gap: 8px;
 }
 
-.quick-create-section {
-  margin-bottom: 30px;
-  text-align: center;
-}
-
-.trips-section {
-  margin-bottom: 30px;
-}
-
-.voice-input-section {
-  text-align: center;
-  margin-top: 50px;
-}
-
-.voice-input-section p {
-  margin-top: 10px;
-  color: #606266;
+.trip-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
 }
 </style>

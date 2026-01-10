@@ -165,7 +165,7 @@ const tripStore = useTripStore()
 const userStore = useUserStore()
 
 // 从路由参数获取行程ID
-const tripId = computed(() => parseInt(route.params.id as string))
+const tripId = computed(() => route.params.id as string)
 
 // 当前行程和费用
 const currentTrip = computed(() => tripStore.currentTrip)

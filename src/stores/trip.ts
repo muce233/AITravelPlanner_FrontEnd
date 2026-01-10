@@ -3,21 +3,21 @@ import { defineStore } from 'pinia'
 import apiClient from '../utils/axios'
 
 export interface Trip {
-  id: number
+  id: string
   user_id: number
-  title: string
-  destination: string
-  start_date: string
-  end_date: string
+  title: string | null
+  destination: string | null
+  start_date: string | null
+  end_date: string | null
   total_budget: number
   actual_expense: number
   created_at: string
-  updated_at: string
+  updated_at: string | null
 }
 
 export interface TripDetail {
-  id: number
-  trip_id: number
+  id: string
+  trip_id: string
   day: number
   type: string
   name: string
@@ -33,7 +33,7 @@ export interface TripDetail {
 
 export interface Expense {
   id: number
-  trip_id: number
+  trip_id: string
   category: string
   amount: number
   currency: string
@@ -68,7 +68,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function fetchTripById(tripId: number) {
+  async function fetchTripById(tripId: string) {
     try {
       const response = await apiClient.get(`/trips/${tripId}`)
       currentTrip.value = response.data
@@ -92,7 +92,18 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function updateTrip(tripId: number, tripData: Partial<Trip>) {
+  async function createQuickTrip() {
+    try {
+      const response = await apiClient.post('/trips/quick')
+      trips.value.push(response.data)
+      return response.data
+    } catch (error) {
+      console.error('Failed to create quick trip:', error)
+      throw error
+    }
+  }
+
+  async function updateTrip(tripId: string, tripData: Partial<Trip>) {
     try {
       const response = await apiClient.put(`/trips/${tripId}`, tripData)
       const index = trips.value.findIndex((t) => t.id === tripId)
@@ -110,7 +121,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function deleteTrip(tripId: number) {
+  async function deleteTrip(tripId: string) {
     try {
       await apiClient.delete(`/trips/${tripId}`)
       trips.value = trips.value.filter((t) => t.id !== tripId)
@@ -125,7 +136,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function generateAITrip(tripId: number) {
+  async function generateAITrip(tripId: string) {
     try {
       const response = await apiClient.post(`/trips/${tripId}/generate`)
       return response
@@ -136,7 +147,7 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   // 行程详情相关操作
-  async function fetchTripDetails(tripId: number) {
+  async function fetchTripDetails(tripId: string) {
     try {
       const response = await apiClient.get(`/trips/${tripId}/details`)
       tripDetails.value = response.data
@@ -147,7 +158,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function createTripDetail(tripId: number, detailData: Omit<TripDetail, 'id' | 'trip_id'>) {
+  async function createTripDetail(tripId: string, detailData: Omit<TripDetail, 'id' | 'trip_id'>) {
     try {
       const response = await apiClient.post(`/trips/${tripId}/details`, detailData)
       tripDetails.value.push(response.data)
@@ -159,8 +170,8 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   async function updateTripDetail(
-    tripId: number,
-    detailId: number,
+    tripId: string,
+    detailId: string,
     detailData: Partial<TripDetail>,
   ) {
     try {
@@ -176,7 +187,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function deleteTripDetail(tripId: number, detailId: number) {
+  async function deleteTripDetail(tripId: string, detailId: string) {
     try {
       await apiClient.delete(`/trips/${tripId}/details/${detailId}`)
       tripDetails.value = tripDetails.value.filter((d) => d.id !== detailId)
@@ -187,7 +198,7 @@ export const useTripStore = defineStore('trip', () => {
   }
 
   // 费用相关操作
-  async function fetchExpenses(tripId: number) {
+  async function fetchExpenses(tripId: string) {
     try {
       const response = await apiClient.get(`/trips/${tripId}/expenses`)
       expenses.value = response.data
@@ -198,7 +209,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function createExpense(tripId: number, expenseData: Omit<Expense, 'id' | 'trip_id'>) {
+  async function createExpense(tripId: string, expenseData: Omit<Expense, 'id' | 'trip_id'>) {
     try {
       const response = await apiClient.post(`/trips/${tripId}/expenses`, expenseData)
       const newExpense = response.data
@@ -215,7 +226,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function updateExpense(tripId: number, expenseId: number, expenseData: Partial<Expense>) {
+  async function updateExpense(tripId: string, expenseId: number, expenseData: Partial<Expense>) {
     try {
       const response = await apiClient.put(`/trips/${tripId}/expenses/${expenseId}`, expenseData)
       const index = expenses.value.findIndex((e) => e.id === expenseId)
@@ -234,7 +245,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function deleteExpense(tripId: number, expenseId: number) {
+  async function deleteExpense(tripId: string, expenseId: number) {
     try {
       await apiClient.delete(`/trips/${tripId}/expenses/${expenseId}`)
       expenses.value = expenses.value.filter((e) => e.id !== expenseId)
@@ -249,7 +260,7 @@ export const useTripStore = defineStore('trip', () => {
     }
   }
 
-  async function getBudgetAnalysis(tripId: number) {
+  async function getBudgetAnalysis(tripId: string) {
     try {
       const response = await apiClient.get(`/trips/${tripId}/expenses/budget/analysis`)
       return response
@@ -278,6 +289,7 @@ export const useTripStore = defineStore('trip', () => {
     fetchTrips,
     fetchTripById,
     createTrip,
+    createQuickTrip,
     updateTrip,
     deleteTrip,
     generateAITrip,
