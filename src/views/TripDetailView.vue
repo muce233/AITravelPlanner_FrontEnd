@@ -42,59 +42,61 @@
                 </el-button>
               </el-empty>
             </div>
-            <el-collapse v-else v-model="activeDays" accordion>
-              <el-collapse-item v-for="day in days" :key="day" :title="`第 ${day} 天`">
-                <el-timeline>
-                  <el-timeline-item
+            <div v-else class="days-container">
+              <div v-for="day in days" :key="day" class="day-block">
+                <div class="day-header">
+                  <h3>第 {{ day }} 天</h3>
+                </div>
+                <div class="day-details">
+                  <div
                     v-for="detail in getDetailsByDay(day)"
                     :key="detail.id"
-                    :timestamp="formatTime(detail.start_time)"
-                    :type="getDetailTypeColor(detail.type)"
+                    class="detail-item"
                   >
-                    <el-card class="detail-card">
-                      <div class="detail-header">
-                        <h3>{{ detail.name }}</h3>
-                        <el-tag :type="getDetailTypeColor(detail.type)">
-                          {{ getDetailTypeName(detail.type) }}
-                        </el-tag>
+                    <div class="detail-type-icon" :class="detail.type">
+                      <el-icon v-if="detail.type === '景点'"><Place /></el-icon>
+                      <el-icon v-else-if="detail.type === '住宿'"><House /></el-icon>
+                      <el-icon v-else-if="detail.type === '餐厅'"><Food /></el-icon>
+                      <el-icon v-else-if="detail.type === '交通'"><Guide /></el-icon>
+                    </div>
+                    <div class="detail-main">
+                      <div class="detail-title-row">
+                        <span class="detail-time">{{ formatTime(detail.start_time) }}</span>
+                        <span class="detail-name">{{ detail.name }}</span>
                       </div>
-
-                      <div class="detail-content">
-                        <p class="detail-time">
-                          {{ formatTimeRange(detail.start_time, detail.end_time) }}
-                        </p>
-                        <p class="detail-address" v-if="detail.address">{{ detail.address }}</p>
-                        <p class="detail-description" v-if="detail.description">
-                          {{ detail.description }}
-                        </p>
-                        <p class="detail-price" v-if="detail.price > 0">
+                      <div class="detail-info-row">
+                        <span v-if="detail.address" class="detail-info-item">
+                          <el-icon><Location /></el-icon>
+                          {{ detail.address }}
+                        </span>
+                        <span v-if="detail.price > 0" class="detail-info-item">
                           <el-icon><Money /></el-icon>
-                          {{ detail.price }} 元
-                        </p>
+                          {{ detail.price }}元
+                        </span>
                       </div>
-
+                      <p v-if="detail.description" class="detail-desc">{{ detail.description }}</p>
                       <div class="detail-actions">
                         <el-button size="small" @click="editDetail(detail)">
                           <el-icon><Edit /></el-icon>
-                          编辑
                         </el-button>
                         <el-button size="small" type="danger" @click="deleteDetail(detail)">
                           <el-icon><Delete /></el-icon>
-                          删除
                         </el-button>
                       </div>
-                    </el-card>
-                  </el-timeline-item>
-                </el-timeline>
-
-                <div class="add-detail-section">
-                  <el-button type="primary" size="small" @click="addDetail(day)">
-                    <el-icon><Plus /></el-icon>
-                    添加行程点
-                  </el-button>
+                    </div>
+                  </div>
+                  <div v-if="getDetailsByDay(day).length === 0" class="day-empty">
+                    暂无行程点
+                  </div>
                 </div>
-              </el-collapse-item>
-            </el-collapse>
+              </div>
+            </div>
+            <div class="add-detail-section">
+              <el-button type="primary" @click="addDetail(1)">
+                <el-icon><Plus /></el-icon>
+                添加行程点
+              </el-button>
+            </div>
           </div>
         </el-card>
       </div>
@@ -287,7 +289,7 @@
     <el-dialog v-model="detailDialogVisible" :title="detailDialogTitle" width="700px">
       <el-form :model="detailForm" :rules="detailRules" ref="detailFormRef" label-width="100px">
         <el-form-item label="天数" prop="day">
-          <el-input-number v-model="detailForm.day" :min="1" :max="30" />
+          <el-input-number v-model.number="detailForm.day" :min="1" :max="30" :step="1" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
           <el-select v-model="detailForm.type" placeholder="请选择类型" style="width: 100%">
@@ -304,25 +306,27 @@
           <el-input v-model="detailForm.address" placeholder="请输入地址" />
         </el-form-item>
         <el-form-item label="开始时间">
-          <el-time-picker
+          <el-date-picker
             v-model="detailForm.start_time"
+            type="datetime"
             placeholder="选择开始时间"
             style="width: 100%"
-            format="HH:mm"
-            value-format="HH:mm:ss"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
           />
         </el-form-item>
         <el-form-item label="结束时间">
-          <el-time-picker
+          <el-date-picker
             v-model="detailForm.end_time"
+            type="datetime"
             placeholder="选择结束时间"
             style="width: 100%"
-            format="HH:mm"
-            value-format="HH:mm:ss"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
           />
         </el-form-item>
         <el-form-item label="价格">
-          <el-input-number v-model="detailForm.price" :min="0" :precision="2" />
+          <el-input-number v-model.number="detailForm.price" :min="0" :precision="2" :step="0.01" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input
@@ -369,7 +373,11 @@ import {
   Loading,
   CircleCheck,
   CircleClose,
-  ArrowLeft
+  ArrowLeft,
+  Place,
+  House,
+  Food,
+  Guide
 } from '@element-plus/icons-vue'
 import VoiceInput from '../components/VoiceInput.vue'
 
@@ -383,7 +391,6 @@ const tripId = computed(() => route.params.id as string)
 const currentTrip = computed(() => tripStore.currentTrip)
 const tripDetails = computed(() => tripStore.tripDetails)
 
-const activeDays = ref([1])
 const editDialogVisible = ref(false)
 const editFormRef = ref<FormInstance>()
 const saving = ref(false)
@@ -463,11 +470,6 @@ const formatDateRange = (startDate?: string, endDate?: string) => {
   return `${formatDate(startDate)} - ${formatDate(endDate)}`
 }
 
-const formatTimeRange = (startTime?: string, endTime?: string) => {
-  if (!startTime || !endTime) return ''
-  return `${formatTime(startTime)} - ${formatTime(endTime)}`
-}
-
 const getDetailsByDay = (day: number) => {
   return tripDetails.value
     .filter((detail) => detail.day === day)
@@ -476,20 +478,6 @@ const getDetailsByDay = (day: number) => {
       const timeB = new Date(b.start_time || 0).getTime()
       return timeA - timeB
     })
-}
-
-const getDetailTypeColor = (type: string) => {
-  const colorMap: Record<string, string> = {
-    景点: 'primary',
-    住宿: 'success',
-    餐厅: 'warning',
-    交通: 'info',
-  }
-  return colorMap[type] || 'default'
-}
-
-const getDetailTypeName = (type: string) => {
-  return type
 }
 
 const goBack = () => {
@@ -551,8 +539,8 @@ const editDetail = (detail: any) => {
     type: detail.type,
     name: detail.name,
     address: detail.address || '',
-    start_time: detail.start_time ? detail.start_time.substring(11, 19) : '',
-    end_time: detail.end_time ? detail.end_time.substring(11, 19) : '',
+    start_time: detail.start_time || '',
+    end_time: detail.end_time || '',
     description: detail.description || '',
     price: detail.price || 0,
     notes: detail.notes || '',
@@ -569,12 +557,8 @@ const handleSaveDetail = async () => {
 
     const detailData = {
       ...detailForm.value,
-      start_time: detailForm.value.start_time
-        ? `${currentTrip.value?.start_date}T${detailForm.value.start_time}`
-        : null,
-      end_time: detailForm.value.end_time
-        ? `${currentTrip.value?.start_date}T${detailForm.value.end_time}`
-        : null,
+      start_time: detailForm.value.start_time || null,
+      end_time: detailForm.value.end_time || null,
     }
 
     if (isEditingDetail.value) {
@@ -884,106 +868,209 @@ onMounted(() => {
 .timeline-section {
   padding: 10px 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.timeline-section::-webkit-scrollbar {
+.days-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  width: 100%;
+}
+
+.days-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.timeline-section::-webkit-scrollbar-track {
+.days-container::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.timeline-section::-webkit-scrollbar-thumb {
+.days-container::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
-.timeline-section::-webkit-scrollbar-thumb:hover {
+.days-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 
-.detail-card {
-  margin-bottom: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-  transition: all 0.3s ease;
+.day-block {
+  margin-bottom: 20px;
+  width: 100%;
+  overflow: hidden;
 }
 
-.detail-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.detail-card :deep(.el-card__body) {
-  padding: 16px;
-}
-
-.detail-header {
+.day-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
   margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.detail-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
   color: #2c3e50;
 }
 
-.detail-content {
-  margin-bottom: 15px;
-}
-
-.detail-time,
-.detail-address,
-.detail-description,
-.detail-price {
-  margin: 6px 0;
-  font-size: 14px;
-  color: #5a6c7d;
-  line-height: 1.6;
-}
-
-.detail-price {
-  color: #28a745;
+.day-header h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
+}
+
+.day-details {
+  width: 100%;
+  overflow: hidden;
+}
+
+.detail-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.detail-type-icon {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 24px;
+}
+
+.detail-type-icon .el-icon {
+  font-size: 24px;
+}
+
+.detail-type-icon.景点 {
+  color: #667eea;
+}
+
+.detail-type-icon.住宿 {
+  color: #28a745;
+}
+
+.detail-type-icon.餐厅 {
+  color: #ffc107;
+}
+
+.detail-type-icon.交通 {
+  color: #17a2b8;
+}
+
+.detail-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.detail-time {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+  min-width: 50px;
+}
+
+.detail-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.detail-info-item {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 13px;
+  color: #5a6c7d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.detail-info-item .el-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.detail-desc {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #5a6c7d;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .detail-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
-  padding-top: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid #f0f0f0;
 }
 
 .detail-actions .el-button {
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  padding: 4px 8px;
+  min-width: auto;
 }
 
-.detail-actions .el-button:hover {
-  transform: translateY(-1px);
+.day-empty {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
 }
 
 .add-detail-section {
-  margin-top: 20px;
-  text-align: right;
-  padding: 15px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  margin-top: 10px;
+  flex-shrink: 0;
+  background: white;
+  border-top: 1px solid #f0f0f0;
 }
 
 .empty-state {
