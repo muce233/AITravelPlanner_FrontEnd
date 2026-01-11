@@ -33,70 +33,66 @@
         </el-card>
 
         <el-card class="trip-view-card">
-          <div class="timeline-section">
-            <div v-if="days.length === 0" class="empty-state">
-              <el-empty description="暂无行程详情">
-                <el-button type="primary" @click="addDetail(1)">
-                  <el-icon><Plus /></el-icon>
-                  添加第一个行程点
-                </el-button>
-              </el-empty>
-            </div>
-            <div v-else class="days-container">
-              <div v-for="day in days" :key="day" class="day-block">
-                <div class="day-header">
-                  <h3>第 {{ day }} 天</h3>
+          <div v-if="days.length === 0" class="empty-state">
+            <el-empty description="暂无行程详情">
+              <el-button type="primary" @click="addDetail(1)">
+                <el-icon><Plus /></el-icon>
+                添加第一个行程点
+              </el-button>
+            </el-empty>
+          </div>
+          <div v-else class="days-container">
+            <div v-for="day in days" :key="day" class="day-block day-bg">
+              <div class="day-header">
+                <h3>第 {{ day }} 天</h3>
+              </div>
+              <div class="day-details">
+                <div
+                  v-for="detail in getDetailsByDay(day)"
+                  :key="detail.id"
+                  class="detail-item"
+                  @click="editDetail(detail)"
+                >
+                  <div class="detail-type-icon" :class="detail.type">
+                    <el-icon v-if="detail.type === '景点'"><Place /></el-icon>
+                    <el-icon v-else-if="detail.type === '住宿'"><House /></el-icon>
+                    <el-icon v-else-if="detail.type === '餐厅'"><Food /></el-icon>
+                    <el-icon v-else-if="detail.type === '交通'"><Guide /></el-icon>
+                  </div>
+                  <div class="detail-main">
+                    <div class="detail-title-row">
+                      <span class="detail-time">{{ formatTime(detail.start_time) }}</span>
+                      <span class="detail-name">{{ detail.name }}</span>
+                    </div>
+                    <div class="detail-info-row">
+                      <span v-if="detail.address" class="detail-info-item">
+                        <el-icon><Location /></el-icon>
+                        {{ detail.address }}
+                      </span>
+                      <span v-if="detail.price > 0" class="detail-info-item">
+                        <el-icon><Money /></el-icon>
+                        {{ detail.price }}元
+                      </span>
+                    </div>
+                    <p v-if="detail.description" class="detail-desc">{{ detail.description }}</p>
+                    <div class="detail-actions">
+                      <el-button size="small" type="danger" @click="handleDeleteDetail($event, detail)" class="delete-btn">
+                        <el-icon><Close /></el-icon>
+                      </el-button>
+                    </div>
+                  </div>
                 </div>
-                <div class="day-details">
-                  <div
-                    v-for="detail in getDetailsByDay(day)"
-                    :key="detail.id"
-                    class="detail-item"
-                  >
-                    <div class="detail-type-icon" :class="detail.type">
-                      <el-icon v-if="detail.type === '景点'"><Place /></el-icon>
-                      <el-icon v-else-if="detail.type === '住宿'"><House /></el-icon>
-                      <el-icon v-else-if="detail.type === '餐厅'"><Food /></el-icon>
-                      <el-icon v-else-if="detail.type === '交通'"><Guide /></el-icon>
-                    </div>
-                    <div class="detail-main">
-                      <div class="detail-title-row">
-                        <span class="detail-time">{{ formatTime(detail.start_time) }}</span>
-                        <span class="detail-name">{{ detail.name }}</span>
-                      </div>
-                      <div class="detail-info-row">
-                        <span v-if="detail.address" class="detail-info-item">
-                          <el-icon><Location /></el-icon>
-                          {{ detail.address }}
-                        </span>
-                        <span v-if="detail.price > 0" class="detail-info-item">
-                          <el-icon><Money /></el-icon>
-                          {{ detail.price }}元
-                        </span>
-                      </div>
-                      <p v-if="detail.description" class="detail-desc">{{ detail.description }}</p>
-                      <div class="detail-actions">
-                        <el-button size="small" @click="editDetail(detail)">
-                          <el-icon><Edit /></el-icon>
-                        </el-button>
-                        <el-button size="small" type="danger" @click="deleteDetail(detail)">
-                          <el-icon><Delete /></el-icon>
-                        </el-button>
-                      </div>
-                    </div>
-                  </div>
-                  <div v-if="getDetailsByDay(day).length === 0" class="day-empty">
-                    暂无行程点
-                  </div>
+                <div v-if="getDetailsByDay(day).length === 0" class="day-empty">
+                  暂无行程点
                 </div>
               </div>
             </div>
-            <div class="add-detail-section">
-              <el-button type="primary" @click="addDetail(1)">
-                <el-icon><Plus /></el-icon>
-                添加行程点
-              </el-button>
-            </div>
+          </div>
+          <div class="add-detail-section">
+            <el-button type="primary" @click="addDetail(1)">
+              <el-icon><Plus /></el-icon>
+              添加行程点
+            </el-button>
           </div>
         </el-card>
       </div>
@@ -376,6 +372,7 @@ import {
   ArrowLeft,
   Place,
   House,
+  Close,
   Food,
   Guide
 } from '@element-plus/icons-vue'
@@ -577,6 +574,11 @@ const handleSaveDetail = async () => {
   } finally {
     savingDetail.value = false
   }
+}
+
+const handleDeleteDetail = (event: Event, detail: any) => {
+  event.stopPropagation()
+  deleteDetail(detail)
 }
 
 const deleteDetail = async (detail: any) => {
@@ -865,22 +867,15 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.timeline-section {
-  padding: 10px 0;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
 .days-container {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
   width: 100%;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+  margin-right: 4px;
 }
 
 .days-container::-webkit-scrollbar {
@@ -913,7 +908,6 @@ onMounted(() => {
   align-items: center;
   padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 12px;
   color: #2c3e50;
 }
 
@@ -925,7 +919,14 @@ onMounted(() => {
 
 .day-details {
   width: 100%;
-  overflow: hidden;
+  /* overflow: hidden; */
+}
+
+.day-bg {
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .detail-item {
@@ -939,7 +940,16 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   width: 100%;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.2s ease;
   overflow: hidden;
+  position: relative;
+}
+
+.detail-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .detail-type-icon {
@@ -1043,17 +1053,37 @@ onMounted(() => {
 }
 
 .detail-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.detail-actions .el-button {
-  padding: 4px 8px;
-  min-width: auto;
+.detail-item:hover .detail-actions {
+  opacity: 1;
+}
+
+.delete-btn {
+  padding: 0 !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  border-radius: 4px !important;
+  background: rgba(245, 108, 108, 0.1) !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.delete-btn:hover {
+  background: rgba(245, 108, 108, 0.2) !important;
+}
+
+.delete-btn .el-icon {
+  font-size: 12px !important;
+  color: #f56c6c !important;
 }
 
 .day-empty {
@@ -1066,8 +1096,8 @@ onMounted(() => {
 .add-detail-section {
   display: flex;
   justify-content: center;
-  padding: 20px 0;
-  margin-top: 10px;
+  padding: 10px 0;
+  margin-top: 5px;
   flex-shrink: 0;
   background: white;
   border-top: 1px solid #f0f0f0;
@@ -1076,6 +1106,11 @@ onMounted(() => {
 .empty-state {
   padding: 40px 0;
   text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .chat-card {
@@ -1100,6 +1135,9 @@ onMounted(() => {
   overflow-y: auto;
   padding: 20px;
   background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  scrollbar-gutter: stable;
+  padding-right: 16px;
+  margin-right: 4px;
 }
 
 .messages-container::-webkit-scrollbar {
