@@ -7,6 +7,10 @@
           <div class="trip-info-header">
             <h2>{{ currentTrip?.title }}</h2>
             <div class="trip-actions">
+              <el-button @click="goBack" size="small">
+                <el-icon><ArrowLeft /></el-icon>
+                返回首页
+              </el-button>
               <el-button @click="editTrip" size="small">
                 <el-icon><Edit /></el-icon>
                 编辑行程
@@ -364,7 +368,8 @@ import {
   Promotion,
   Loading,
   CircleCheck,
-  CircleClose
+  CircleClose,
+  ArrowLeft
 } from '@element-plus/icons-vue'
 import VoiceInput from '../components/VoiceInput.vue'
 
@@ -485,6 +490,10 @@ const getDetailTypeColor = (type: string) => {
 
 const getDetailTypeName = (type: string) => {
   return type
+}
+
+const goBack = () => {
+  router.push('/')
 }
 
 const editTrip = () => {
