@@ -238,7 +238,7 @@ export const useChatStore = defineStore('chat', () => {
     isLoading.value = true
     error.value = null
 
-    const requestMessages: ChatMessage[] = [...messages.value]
+    const requestMessages: ChatMessage[] = messages.value.filter(msg => msg.role !== 'tool')
 
     isStreaming.value = true
     currentStreamContent.value = ''

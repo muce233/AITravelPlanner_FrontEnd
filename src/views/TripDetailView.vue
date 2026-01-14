@@ -690,13 +690,27 @@ const scrollToBottom = () => {
 }
 
 watch(
-  messages,
-  () => {
+  () => messages.value.length,
+  async (newLength, oldLength) => {
     nextTick(() => {
       scrollToBottom()
     })
+
+    if (oldLength !== undefined && newLength > oldLength) {
+      const lastMessage = messages.value[messages.value.length - 1]
+
+      if (lastMessage.message_type === 'tool_result') {
+        const match = lastMessage.content.match(/工具 (\w+) 调用完成/)
+        if (match && match[1] === 'edit_trip') {
+          try {
+            await tripStore.fetchTripById(tripId.value)
+          } catch (error) {
+            console.error('刷新行程数据失败:', error)
+          }
+        }
+      }
+    }
   },
-  { deep: true },
 )
 
 watch(isStreaming, (newVal) => {
