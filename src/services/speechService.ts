@@ -73,6 +73,8 @@ export class SpeechRecognitionService {
   private websocket: WebSocket | null = null
   private sessionId: string = ''
   private isConnected: boolean = false
+  private connectionPromise: Promise<boolean> | null = null
+  private connectionResolver: ((value: boolean) => void) | null = null
 
   constructor() {
     this.baseURL = apiClient.defaults.baseURL || ''
@@ -98,8 +100,17 @@ export class SpeechRecognitionService {
 
       this.websocket = new WebSocket(wsUrl)
 
+      // 创建连接Promise
+      this.connectionPromise = new Promise<boolean>((resolve) => {
+        this.connectionResolver = resolve
+      })
+
       this.websocket.onopen = () => {
         this.isConnected = true
+        if (this.connectionResolver) {
+          this.connectionResolver(true)
+          this.connectionResolver = null
+        }
       }
 
       this.websocket.onmessage = (event) => {
@@ -125,17 +136,51 @@ export class SpeechRecognitionService {
         console.error('WebSocket连接错误:', error)
         onError('语音识别连接失败')
         this.isConnected = false
+        if (this.connectionResolver) {
+          this.connectionResolver(false)
+          this.connectionResolver = null
+        }
       }
 
       this.websocket.onclose = () => {
         this.isConnected = false
         onClose()
+        if (this.connectionResolver) {
+          this.connectionResolver(false)
+          this.connectionResolver = null
+        }
       }
 
       return true
     } catch (error) {
       console.error('连接实时语音识别失败:', error)
       onError('连接语音识别服务失败')
+      return false
+    }
+  }
+
+  /**
+   * 等待WebSocket连接建立
+   */
+  async waitForConnection(timeout: number = 5000): Promise<boolean> {
+    if (this.isConnected) {
+      return true
+    }
+
+    if (!this.connectionPromise) {
+      return false
+    }
+
+    try {
+      const result = await Promise.race([
+        this.connectionPromise,
+        new Promise<boolean>((resolve) => {
+          setTimeout(() => resolve(false), timeout)
+        })
+      ])
+      return result
+    } catch (error) {
+      console.error('等待连接超时:', error)
       return false
     }
   }

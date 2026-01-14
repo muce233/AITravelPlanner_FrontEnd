@@ -284,10 +284,6 @@ const startRecording = async () => {
   if (isRecording.value) return
 
   try {
-    // 初始化音频录制
-    const audioInitialized = await initAudioRecording()
-    if (!audioInitialized) return
-
     // 生成会话ID
     const sessionId = Date.now().toString()
 
@@ -305,6 +301,23 @@ const startRecording = async () => {
 
     if (!connected) {
       error.value = '连接语音识别服务失败'
+      isConnecting.value = false
+      return
+    }
+
+    // 等待WebSocket连接建立
+    const connectionEstablished = await speechService.waitForConnection(5000)
+    if (!connectionEstablished) {
+      error.value = 'WebSocket连接超时，请检查网络连接'
+      isConnecting.value = false
+      return
+    }
+
+    // 初始化音频录制
+    const audioInitialized = await initAudioRecording()
+    if (!audioInitialized) {
+      error.value = '初始化音频录制失败'
+      isConnecting.value = false
       return
     }
 
