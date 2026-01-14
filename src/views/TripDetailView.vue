@@ -34,12 +34,7 @@
 
         <el-card class="trip-view-card">
           <div v-if="days.length === 0" class="empty-state">
-            <el-empty description="暂无行程详情">
-              <el-button type="primary" @click="addDetail(1)">
-                <el-icon><Plus /></el-icon>
-                添加第一个行程点
-              </el-button>
-            </el-empty>
+            <el-empty description="暂无行程详情" />
           </div>
           <div v-else class="days-container">
             <div v-for="day in days" :key="day" class="day-block day-bg">
