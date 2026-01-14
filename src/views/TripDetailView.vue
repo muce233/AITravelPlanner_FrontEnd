@@ -221,25 +221,35 @@
               </div>
 
               <div class="input-actions">
-                <div class="voice-input-inline">
-                  <VoiceInput
-                    horizontal
-                    @transcription="handleVoiceTranscription"
-                    @interim-transcription="handleInterimTranscription"
-                    @recording-started="handleRecordingStarted"
-                    @recording-stopped="handleRecordingStopped"
-                    @send-input="handleSendMessage"
-                  />
-                </div>
                 <el-button
-                  type="primary"
-                  :loading="isLoading"
-                  @click="handleSendMessage"
-                  :disabled="!inputMessage.trim()"
+                  v-if="currentTrip?.conversation_id"
+                  type="warning"
+                  @click="handleClearConversation"
                 >
-                  <el-icon><Promotion /></el-icon>
-                  发送
+                  <el-icon><Delete /></el-icon>
+                  清空
                 </el-button>
+                <div class="input-actions-right">
+                  <div class="voice-input-inline">
+                    <VoiceInput
+                      horizontal
+                      @transcription="handleVoiceTranscription"
+                      @interim-transcription="handleInterimTranscription"
+                      @recording-started="handleRecordingStarted"
+                      @recording-stopped="handleRecordingStopped"
+                      @send-input="handleSendMessage"
+                    />
+                  </div>
+                  <el-button
+                    type="primary"
+                    :loading="isLoading"
+                    @click="handleSendMessage"
+                    :disabled="!inputMessage.trim()"
+                  >
+                    <el-icon><Promotion /></el-icon>
+                    发送
+                  </el-button>
+                </div>
               </div>
             </div>
           </div>
@@ -686,6 +696,31 @@ const handleSendMessage = async () => {
 const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+const handleClearConversation = async () => {
+  if (!currentTrip.value?.conversation_id) {
+    ElMessage.warning('当前行程没有关联的对话')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm('确定要清空当前对话的所有消息吗？此操作不可恢复。', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    await chatStore.clearConversationMessages(currentTrip.value.conversation_id)
+
+    const messages = await chatStore.getConversationMessages(currentTrip.value.conversation_id)
+    chatStore.setMessages(messages)
+  } catch (error) {
+    // 用户点击取消时不显示错误
+    if (error !== 'cancel') {
+      ElMessage.error('清空对话失败')
+    }
   }
 }
 
@@ -1387,7 +1422,13 @@ onMounted(() => {
 
 .input-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-actions-right {
+  display: flex;
   align-items: center;
   gap: 8px;
 }

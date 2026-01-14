@@ -45,8 +45,12 @@
     <div class="chat-main">
       <!-- 页面标题 -->
       <div class="chat-header">
-        <h1>AI聊天助手</h1>
-        <p>与智能助手进行实时对话，获取专业建议和帮助</p>
+        <div class="header-content">
+          <div class="header-text">
+            <h1>AI聊天助手</h1>
+            <p>与智能助手进行实时对话，获取专业建议和帮助</p>
+          </div>
+        </div>
       </div>
 
       <!-- 消息列表 -->
@@ -174,21 +178,20 @@
 
         <!-- 输入框和操作按钮 -->
         <div class="input-area">
-          <div class="input-with-voice">
-            <el-input
-              v-model="inputMessage"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入您的问题..."
-              :maxlength="2000"
-              show-word-limit
-              @keydown.enter.exact.prevent="handleSendMessage"
-              ref="inputRef"
-              resize="none"
-            />
-          </div>
-
-          <div class="input-actions">
+          <div class="input-actions-right">
+            <div class="input-with-voice">
+              <el-input
+                v-model="inputMessage"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入您的问题..."
+                :maxlength="2000"
+                show-word-limit
+                @keydown.enter.exact.prevent="handleSendMessage"
+                ref="inputRef"
+                resize="none"
+              />
+            </div>
             <el-button
               type="primary"
               :loading="isLoading"
@@ -199,6 +202,18 @@
               发送
             </el-button>
           </div>
+        </div>
+
+        <div class="input-actions">
+          <el-button
+            v-if="currentConversationId"
+            type="warning"
+            @click="handleClearConversation"
+            :disabled="!currentConversationId"
+          >
+            <el-icon><Delete /></el-icon>
+            清空
+          </el-button>
         </div>
       </div>
     </div>
@@ -218,7 +233,8 @@ import {
   Plus,
   Close,
   CircleCheck,
-  CircleClose
+  CircleClose,
+  Delete
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -416,6 +432,23 @@ const handleDeleteConversation = async (conversationId: string) => {
     // 用户点击取消时不显示错误
     if (error !== 'cancel') {
       ElMessage.error('删除对话失败')
+    }
+  }
+}
+
+const handleClearConversation = async () => {
+  try {
+    await ElMessageBox.confirm('确定要清空当前对话的所有消息吗？此操作不可恢复。', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    await chatStore.clearConversationMessages(currentConversationId.value)
+  } catch (error) {
+    // 用户点击取消时不显示错误
+    if (error !== 'cancel') {
+      ElMessage.error('清空对话失败')
     }
   }
 }
@@ -660,8 +693,19 @@ onUnmounted(() => {
 .chat-header {
   background: rgba(255, 255, 255, 0.95);
   padding: 20px;
-  text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.header-text {
+  flex: 1;
 }
 
 .chat-header h1 {
@@ -904,7 +948,18 @@ onUnmounted(() => {
 }
 
 .input-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.input-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
 }
 
 /* 移动端适配 */

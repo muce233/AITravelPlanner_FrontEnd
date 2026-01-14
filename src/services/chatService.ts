@@ -148,6 +148,10 @@ class ChatService {
   async deleteConversation(conversationId: string): Promise<void> {
     await apiClient.delete(`/chat/conversations/${conversationId}`)
   }
+
+  async clearConversationMessages(conversationId: string): Promise<void> {
+    await apiClient.post(`/chat/conversations/${conversationId}/clear`)
+  }
 }
 
 export const chatService = new ChatService()

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { chatService, type ChatMessage, type ChatRequest, type ConversationBasicInfo, type Conversation } from '../services/chatService'
 
 export const useChatStore = defineStore('chat', () => {
@@ -179,6 +180,32 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : '删除对话失败'
+      throw err
+    }
+  }
+
+  const clearConversationMessages = async (conversationId: string): Promise<void> => {
+    try {
+      await chatService.clearConversationMessages(conversationId)
+
+      if (currentConversation.value?.id === conversationId) {
+        messages.value = []
+        clearMessages()
+        initializeToolCallStatusMap([])
+      }
+
+      const index = conversations.value.findIndex(c => c.id === conversationId)
+      if (index !== -1) {
+        const conversation = conversations.value[index]
+        if (conversation) {
+          conversation.updated_at = new Date().toISOString()
+          conversation.latest_message_preview = ''
+        }
+      }
+
+      ElMessage.success('对话消息已清空')
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '清空对话消息失败'
       throw err
     }
   }
@@ -370,6 +397,7 @@ export const useChatStore = defineStore('chat', () => {
     getConversation,
     getConversationMessages,
     deleteConversation,
+    clearConversationMessages,
     sendMessage,
     updateConversationOrder
   }
