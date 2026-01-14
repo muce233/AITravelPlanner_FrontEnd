@@ -701,11 +701,20 @@ watch(
 
       if (lastMessage.message_type === 'tool_result') {
         const match = lastMessage.content.match(/工具 (\w+) 调用完成/)
-        if (match && match[1] === 'edit_trip') {
+        if (match) {
+          const toolName = match[1]
           try {
-            await tripStore.fetchTripById(tripId.value)
+            if (toolName === 'edit_trip') {
+              await tripStore.fetchTripById(tripId.value)
+            } else if (
+              toolName === 'create_trip_detail' ||
+              toolName === 'update_trip_detail' ||
+              toolName === 'delete_trip_detail'
+            ) {
+              await tripStore.fetchTripDetails(tripId.value)
+            }
           } catch (error) {
-            console.error('刷新行程数据失败:', error)
+            console.error('刷新数据失败:', error)
           }
         }
       }
