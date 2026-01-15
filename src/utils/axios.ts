@@ -1,13 +1,46 @@
 import axios from 'axios'
 
-// 创建axios实例
-export const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  timeout: 10000,
+interface ApiConfig {
+  api: {
+    baseURL: string
+    timeout: number
+  }
+}
+
+let apiConfig: ApiConfig = {
+  api: {
+    baseURL: 'http://localhost:8000/api',
+    timeout: 10000
+  }
+}
+
+export async function loadApiConfig() {
+  try {
+    const response = await fetch('/config.json')
+    const config = await response.json()
+    apiConfig = config
+    apiClient.defaults.baseURL = apiConfig.api.baseURL
+    apiClient.defaults.timeout = apiConfig.api.timeout
+  } catch (error) {
+    console.warn('Failed to load API config, using defaults:', error)
+  }
+}
+
+const apiClient = axios.create({
+  baseURL: apiConfig.api.baseURL,
+  timeout: apiConfig.api.timeout,
   headers: {
     'Content-Type': 'application/json'
   }
 })
+
+export const getApiClient = () => {
+  apiClient.defaults.baseURL = apiConfig.api.baseURL
+  apiClient.defaults.timeout = apiConfig.api.timeout
+  return apiClient
+}
+
+export { apiClient }
 
 // 流式请求函数
 export const streamClient = {
@@ -21,7 +54,7 @@ export const streamClient = {
     const token = localStorage.getItem('token')
 
     try {
-      const response = await fetch(`${apiClient.defaults.baseURL}${url}`, {
+      const response = await fetch(`${apiConfig.api.baseURL}${url}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
