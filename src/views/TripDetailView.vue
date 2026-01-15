@@ -918,6 +918,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .days-container {
@@ -1159,11 +1161,12 @@ onMounted(() => {
 .empty-state {
   padding: 40px 0;
   text-align: center;
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .chat-card {
@@ -1191,6 +1194,9 @@ onMounted(() => {
   scrollbar-gutter: stable;
   padding-right: 16px;
   margin-right: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .messages-container::-webkit-scrollbar {
