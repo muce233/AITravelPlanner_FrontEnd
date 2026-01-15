@@ -35,20 +35,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function register(username: string, phone_number: string, password: string) {
-    try {
-      const response = await apiClient.post('/users/register', {
-        username,
-        phone_number,
-        password,
-      })
-      return response
-    } catch (error) {
-      console.error('Registration failed:', error)
-      throw error
-    }
-  }
-
   async function logout() {
     try {
       await apiClient.post('/auth/logout')
@@ -100,7 +86,6 @@ export const useUserStore = defineStore('user', () => {
     isAuthenticated,
     token,
     login,
-    register,
     logout,
     fetchUserProfile,
     updateUserProfile,

@@ -38,10 +38,6 @@
             登录
           </el-button>
         </el-form-item>
-
-        <div class="login-footer">
-          <p>还没有账号？<el-link type="primary" @click="$router.push('/register')">立即注册</el-link></p>
-        </div>
       </el-form>
     </el-card>
   </div>
@@ -126,17 +122,6 @@ const handleLogin = async () => {
 .card-header p {
   margin: 0;
   color: #909399;
-  font-size: 14px;
-}
-
-.login-footer {
-  text-align: center;
-  margin-top: 16px;
-}
-
-.login-footer p {
-  margin: 0;
-  color: #606266;
   font-size: 14px;
 }
 </style>

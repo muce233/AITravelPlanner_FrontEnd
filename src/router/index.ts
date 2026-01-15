@@ -9,7 +9,6 @@ const router = createRouter({
 
     // 用户认证
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
-    { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue') },
 
     // 聊天功能
     { 
