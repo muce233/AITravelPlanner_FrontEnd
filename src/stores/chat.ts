@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { chatService, type ChatMessage, type ChatRequest, type ConversationBasicInfo, type Conversation } from '../services/chatService'
+import { generateUUID } from '../utils/uuid'
 
 export const useChatStore = defineStore('chat', () => {
   const messages = ref<ChatMessage[]>([])
@@ -251,7 +252,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!content.trim()) return
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       role: 'user',
       content: content.trim()
     }
@@ -300,7 +301,7 @@ export const useChatStore = defineStore('chat', () => {
           // 处理tool_call事件
           else if (event.type === 'tool_call') {
             const toolName = event.content.replace('正在调用工具: ', '')
-            const toolCallMessageId = crypto.randomUUID()
+            const toolCallMessageId = generateUUID()
             currentToolCallMessageId.value = toolCallMessageId
 
             // 创建工具调用状态消息
@@ -318,7 +319,7 @@ export const useChatStore = defineStore('chat', () => {
           // 处理tool_result事件
           else if (event.type === 'tool_result') {
             const toolName = event.content.replace('工具 ', '').replace(' 调用完成', '')
-            const toolResultMessageId = crypto.randomUUID()
+            const toolResultMessageId = generateUUID()
 
             // 创建工具结果消息
             const toolResultMessage: ChatMessage = {

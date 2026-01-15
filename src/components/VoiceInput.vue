@@ -9,7 +9,6 @@
           :size="horizontal ? 'default' : 'large'"
           @click="toggleRecording"
           :loading="isConnecting"
-          :disabled="!hasMicrophonePermission"
         >
           <el-icon v-if="isRecording"><i-ep-turn-off-microphone /></el-icon>
           <el-icon v-else><Microphone /></el-icon>
@@ -42,7 +41,6 @@
             circle
             size="large"
             @click="enterVoiceMode"
-            :disabled="!hasMicrophonePermission"
           >
           </el-button>
         </el-tooltip>
@@ -92,7 +90,7 @@
     </div>
 
     <!-- 权限提示 -->
-    <div v-if="!hasMicrophonePermission && !permissionRequested" class="permission-prompt">
+    <div v-if="showPermissionPrompt" class="permission-prompt">
       <el-alert
         title="需要麦克风权限"
         description="请允许使用麦克风以启用语音输入功能"
@@ -113,7 +111,22 @@
         :closable="true"
         @close="error = null"
         show-icon
-      />
+      >
+        <template #default>
+          <div class="error-content">
+            <span>{{ error }}</span>
+            <el-button
+              v-if="!hasMicrophonePermission"
+              type="primary"
+              size="small"
+              @click="requestPermission"
+              style="margin-left: 10px;"
+            >
+              重新授权
+            </el-button>
+          </div>
+        </template>
+      </el-alert>
     </div>
   </div>
 </template>
@@ -131,6 +144,7 @@ const isConnecting = ref(false)
 const voiceMode = ref(false)
 const hasMicrophonePermission = ref(false)
 const permissionRequested = ref(false)
+const showPermissionPrompt = ref(false)
 const error = ref<string | null>(null)
 
 // 录音计时相关
@@ -171,13 +185,20 @@ const checkDeviceType = () => {
 const requestPermission = async () => {
   try {
     permissionRequested.value = true
+    error.value = null // 清除之前的错误
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     hasMicrophonePermission.value = true
+    showPermissionPrompt.value = false // 隐藏权限提示
     // 立即关闭流，我们只需要权限
     stream.getTracks().forEach(track => track.stop())
     ElMessage.success('麦克风权限已授权')
-  } catch {
-    error.value = '麦克风权限被拒绝，请检查浏览器设置'
+  } catch (err) {
+    // 区分用户拒绝和其他错误
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      error.value = '麦克风权限被拒绝，请点击下方按钮重新授权'
+    } else {
+      error.value = '无法访问麦克风，请检查设备设置'
+    }
     hasMicrophonePermission.value = false
   }
 }
@@ -192,8 +213,9 @@ const checkMicrophonePermission = async () => {
       hasMicrophonePermission.value = permissionStatus.state === 'granted'
     }
   } catch {
-    // 浏览器不支持Permissions API，尝试直接请求
-    await requestPermission()
+    // 浏览器不支持Permissions API，保持hasMicrophonePermission为false
+    // 让用户通过点击按钮主动授权
+    hasMicrophonePermission.value = false
   }
 }
 
@@ -401,7 +423,16 @@ const cleanupAudioResources = () => {
 }
 
 // 切换录音状态（PC端）
-const toggleRecording = () => {
+const toggleRecording = async () => {
+  // 检查麦克风权限
+  if (!hasMicrophonePermission.value) {
+    await checkMicrophonePermission()
+    if (!hasMicrophonePermission.value) {
+      showPermissionPrompt.value = true
+      return
+    }
+  }
+
   if (isRecording.value) {
     stopRecording()
   } else {
@@ -410,7 +441,15 @@ const toggleRecording = () => {
 }
 
 // 进入语音模式（移动端）
-const enterVoiceMode = () => {
+const enterVoiceMode = async () => {
+  // 检查麦克风权限
+  if (!hasMicrophonePermission.value) {
+    await checkMicrophonePermission()
+    if (!hasMicrophonePermission.value) {
+      showPermissionPrompt.value = true
+      return
+    }
+  }
   voiceMode.value = true
 }
 
@@ -450,7 +489,6 @@ const props = withDefaults(defineProps<Props>(), {
 // 生命周期
 onMounted(() => {
   checkDeviceType()
-  checkMicrophonePermission()
   useDefaultConfig()
 
   window.addEventListener('resize', checkDeviceType)
@@ -621,5 +659,17 @@ onUnmounted(() => {
 /* 错误提示 */
 .error-message {
   max-width: 300px;
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.error-content span {
+  flex: 1;
+  min-width: 150px;
 }
 </style>
