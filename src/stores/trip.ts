@@ -11,7 +11,7 @@ export interface Trip {
   end_date: string | null
   total_budget: number
   actual_expense: number
-  conversation_id: string
+  conversation_id: string | null
   created_at: string
   updated_at: string | null
 }
@@ -24,8 +24,8 @@ export interface TripDetail {
   name: string
   location: any
   address: string
-  start_time: string
-  end_time: string
+  start_time: string | null
+  end_time: string | null
   description: string
   price: number
   notes: string
@@ -53,7 +53,9 @@ export const useTripStore = defineStore('trip', () => {
   // 计算属性
   const sortedTrips = computed(() => {
     return [...trips.value].sort((a, b) => {
-      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+      const aTime = a.start_date ? new Date(a.start_date).getTime() : 0
+      const bTime = b.start_date ? new Date(b.start_date).getTime() : 0
+      return bTime - aTime
     })
   })
 

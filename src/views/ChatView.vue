@@ -324,6 +324,8 @@ const messagesContainer = ref<HTMLDivElement>()
     for (let i = 0; i < messages.value.length; i++) {
       const currentMessage = messages.value[i]
 
+      if (!currentMessage) continue
+
       if (currentMessage.role === 'user') {
         result.push({
           role: 'user',

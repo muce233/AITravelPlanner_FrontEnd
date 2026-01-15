@@ -156,6 +156,7 @@ const handleSubmit = async () => {
       start_date: tripForm.value.start_date,
       end_date: tripForm.value.end_date,
       total_budget: tripForm.value.total_budget,
+      conversation_id: null,
     }
 
     const newTrip = await tripStore.createTrip(tripData)

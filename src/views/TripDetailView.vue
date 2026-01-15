@@ -461,13 +461,13 @@ const formatDate = (dateString?: string) => {
   return date.toLocaleDateString()
 }
 
-const formatTime = (timeString?: string) => {
+const formatTime = (timeString?: string | null) => {
   if (!timeString) return ''
   const date = new Date(timeString)
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-const formatDateRange = (startDate?: string, endDate?: string) => {
+const formatDateRange = (startDate?: string | null, endDate?: string | null) => {
   if (!startDate || !endDate) return ''
   return `${formatDate(startDate)} - ${formatDate(endDate)}`
 }
@@ -561,6 +561,8 @@ const handleSaveDetail = async () => {
       ...detailForm.value,
       start_time: detailForm.value.start_time || null,
       end_time: detailForm.value.end_time || null,
+      location: null,
+      images: [],
     }
 
     if (isEditingDetail.value) {
@@ -613,6 +615,8 @@ const mergedMessages = computed(() => {
 
   for (let i = 0; i < messages.value.length; i++) {
     const currentMessage = messages.value[i]
+
+    if (!currentMessage) continue
 
     if (currentMessage.role === 'user') {
       result.push({
@@ -728,6 +732,8 @@ watch(
 
     if (oldLength !== undefined && newLength > oldLength) {
       const lastMessage = messages.value[messages.value.length - 1]
+
+      if (!lastMessage) return
 
       if (lastMessage.message_type === 'tool_result') {
         const match = lastMessage.content.match(/工具 (\w+) 调用完成/)
